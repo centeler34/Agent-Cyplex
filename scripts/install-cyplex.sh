@@ -241,10 +241,6 @@ setup_config() {
         warn "Config already exists at ~/.cyplex/config.yaml — skipping"
     fi
 
-    if [ ! -f "$INSTALL_DIR/.env" ] && [ -f "$INSTALL_DIR/.env.example" ]; then
-        cp "$INSTALL_DIR/.env.example" "$INSTALL_DIR/.env"
-        warn "Edit $INSTALL_DIR/.env to add your API keys"
-    fi
 }
 
 install_command() {
@@ -333,13 +329,16 @@ main() {
     echo -e "${GREEN}${BOLD}  Agent Cyplex installed successfully!${NC}"
     echo -e "${GREEN}${BOLD}============================================${NC}"
     echo ""
-    echo -e "  Run:  ${BOLD}agent-cyplex${NC}              to launch the CLI"
-    echo -e "  Run:  ${BOLD}agent-cyplex daemon start${NC}  to start the daemon"
+    echo -e "  Run ${BOLD}agent-cyplex${NC} to launch the setup wizard and configure your API keys."
     echo ""
-    echo -e "  Config:  ${CYAN}~/.cyplex/config.yaml${NC}"
-    echo -e "  API Keys: ${CYAN}$INSTALL_DIR/.env${NC}"
+    echo -e "  The setup wizard will walk you through:"
+    echo -e "    ${CYAN}1.${NC} Master password for encrypted keystore"
+    echo -e "    ${CYAN}2.${NC} AI provider API keys (Anthropic, OpenAI, Gemini)"
+    echo -e "    ${CYAN}3.${NC} Local AI backends (Ollama, LM Studio)"
+    echo -e "    ${CYAN}4.${NC} Bot integrations (Telegram, Discord, WhatsApp)"
+    echo -e "    ${CYAN}5.${NC} Daemon & security settings"
     echo ""
-    echo -e "  ${YELLOW}Don't forget to add your API keys to .env${NC}"
+    echo -e "  After setup, use ${BOLD}agent-cyplex daemon start${NC} to start the daemon."
     echo ""
 }
 
