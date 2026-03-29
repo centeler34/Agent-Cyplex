@@ -268,9 +268,12 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
 
 async function fetchModels(baseUrl: string, provider: 'ollama' | 'lmstudio'): Promise<string[]> {
   try {
+    const base = baseUrl.replace(/\/+$/, '');
+    // Ollama: GET /api/tags → { models: [{ name }] }
+    // LM Studio: GET /v1/models → { data: [{ id }] }
     const url = provider === 'ollama'
-      ? `${baseUrl.replace(/\/+$/, '')}/api/tags`
-      : `${baseUrl.replace(/\/+$/, '')}/api/v1/models`;
+      ? `${base}/api/tags`
+      : `${base}/v1/models`;
 
     const res = await fetch(url, {
       method: 'GET',
@@ -286,8 +289,6 @@ async function fetchModels(baseUrl: string, provider: 'ollama' | 'lmstudio'): Pr
       for (const m of data.models) models.push(m.name || m.model);
     } else if (data.data) {
       for (const m of data.data) models.push(m.id || m.model);
-    } else if (Array.isArray(data)) {
-      for (const m of data) models.push(m.id || m.model || m);
     }
 
     return models;

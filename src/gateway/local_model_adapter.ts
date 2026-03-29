@@ -1,16 +1,25 @@
 /**
- * Local model adapter — for LM Studio and Ollama local AI backends.
+ * Local model adapter — for Ollama and LM Studio local AI backends.
  *
- * LM Studio API:
- *   GET  /api/v1/models                        — List loaded models
- *   POST /api/v1/chat                           — Chat completion
- *   POST /api/v1/models/load                    — Load a model into memory
- *   POST /api/v1/models/download                — Download a model
- *   GET  /api/v1/models/download/status/:job_id — Check download progress
+ * Ollama API (http://localhost:11434):
+ *   GET  /api/tags           — List downloaded models
+ *   GET  /api/ps             — List running/loaded models
+ *   POST /api/chat           — Chat completion (native format)
+ *   POST /api/pull           — Download a model
+ *   Streaming: raw JSON lines, no SSE prefix. Termination: {"done": true}
+ *   Token fields: prompt_eval_count, eval_count
+ *   Sampling params go inside options: {}
  *
- * Ollama API (fallback):
- *   GET  /api/tags                              — List models
- *   POST /api/chat                              — Chat completion
+ * LM Studio API (http://127.0.0.1:1234):
+ *   GET  /v1/models                         — List loaded models (OpenAI format)
+ *   POST /v1/chat/completions               — Chat completion (OpenAI format)
+ *   POST /api/v1/models/load                — Load model into memory
+ *   POST /api/v1/models/unload              — Unload model from memory
+ *   POST /api/v1/models/download            — Download a model
+ *   GET  /api/v1/models/download-status     — Check download progress
+ *   Streaming: SSE format with "data: " prefix. Termination: data: [DONE]
+ *   Token fields: usage.prompt_tokens, usage.completion_tokens
+ *   Sampling params are top-level request fields
  */
 
 import type { ModelClient } from './model_client.js';
@@ -47,31 +56,7 @@ export class LocalModelAdapter implements ModelClient {
 
   async testConnection(): Promise<{ ok: boolean; message: string; models?: string[] }> {
     try {
-      const modelsUrl = this.provider === 'ollama'
-        ? `${this.baseUrl}/api/tags`
-        : `${this.baseUrl}/api/v1/models`;
-
-      const res = await fetch(modelsUrl, {
-        method: 'GET',
-        signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
-      });
-
-      if (!res.ok) {
-        return { ok: false, message: `${this.provider} responded with HTTP ${res.status} at ${modelsUrl}` };
-      }
-
-      const data: any = await res.json();
-      const models: string[] = [];
-
-      if (this.provider === 'ollama' && data.models) {
-        for (const m of data.models) models.push(m.name || m.model);
-      } else if (data.data) {
-        // LM Studio /api/v1/models returns { data: [...] }
-        for (const m of data.data) models.push(m.id || m.model);
-      } else if (Array.isArray(data)) {
-        for (const m of data) models.push(m.id || m.model || m);
-      }
-
+      const models = await this.listModels();
       return {
         ok: true,
         message: `Connected to ${this.provider} at ${this.baseUrl}`,
@@ -82,17 +67,17 @@ export class LocalModelAdapter implements ModelClient {
     }
   }
 
-  // ── Model Management (LM Studio) ───────────────────────────────────────
+  // ── Model Management ───────────────────────────────────────────────────
 
   /**
    * List available models.
-   * LM Studio: GET /api/v1/models
-   * Ollama:    GET /api/tags
+   * Ollama:    GET /api/tags → { models: [{ name, ... }] }
+   * LM Studio: GET /v1/models → { data: [{ id, ... }] }
    */
   async listModels(): Promise<string[]> {
     const url = this.provider === 'ollama'
       ? `${this.baseUrl}/api/tags`
-      : `${this.baseUrl}/api/v1/models`;
+      : `${this.baseUrl}/v1/models`;
 
     const res = await fetch(url, {
       method: 'GET',
@@ -108,17 +93,33 @@ export class LocalModelAdapter implements ModelClient {
       for (const m of data.models) models.push(m.name || m.model);
     } else if (data.data) {
       for (const m of data.data) models.push(m.id || m.model);
-    } else if (Array.isArray(data)) {
-      for (const m of data) models.push(m.id || m.model || m);
     }
 
     return models;
   }
 
   /**
+   * List currently running/loaded models.
+   * Ollama:    GET /api/ps → { models: [...] }
+   * LM Studio: GET /v1/models (same as list — loaded models are shown)
+   */
+  async listRunningModels(): Promise<string[]> {
+    if (this.provider === 'ollama') {
+      const res = await fetch(`${this.baseUrl}/api/ps`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
+      });
+      if (!res.ok) return [];
+      const data: any = await res.json();
+      return (data.models || []).map((m: any) => m.name || m.model);
+    }
+    return this.listModels();
+  }
+
+  /**
    * Load a model into memory.
-   * LM Studio: POST /api/v1/models/load
-   * Ollama:    POST /api/generate (with keep_alive)
+   * LM Studio: POST /api/v1/models/load { model }
+   * Ollama:    POST /api/chat with empty messages (triggers model load)
    */
   async loadModel(modelName?: string): Promise<{ ok: boolean; message: string }> {
     const name = modelName ?? this.model;
@@ -138,11 +139,11 @@ export class LocalModelAdapter implements ModelClient {
       return { ok: true, message: `Model "${name}" loaded` };
     }
 
-    // Ollama: pull to ensure available
-    const res = await fetch(`${this.baseUrl}/api/pull`, {
+    // Ollama: pull ensures available, then a chat request triggers load
+    const res = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, stream: false }),
+      body: JSON.stringify({ model: name, messages: [], stream: false, keep_alive: '10m' }),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
 
@@ -154,9 +155,47 @@ export class LocalModelAdapter implements ModelClient {
   }
 
   /**
+   * Unload a model from memory.
+   * LM Studio: POST /api/v1/models/unload { instance_id }
+   * Ollama:    POST /api/chat with keep_alive: 0 (immediately unloads)
+   */
+  async unloadModel(modelName?: string): Promise<{ ok: boolean; message: string }> {
+    const name = modelName ?? this.model;
+
+    if (this.provider === 'lmstudio') {
+      const res = await fetch(`${this.baseUrl}/api/v1/models/unload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_id: name }),
+        signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
+      });
+
+      if (!res.ok) {
+        const body = await res.text();
+        return { ok: false, message: `Failed to unload: HTTP ${res.status} — ${body}` };
+      }
+      return { ok: true, message: `Model "${name}" unloaded` };
+    }
+
+    // Ollama: set keep_alive to 0 to immediately unload
+    const res = await fetch(`${this.baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: name, messages: [], stream: false, keep_alive: 0 }),
+      signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      return { ok: false, message: `Failed to unload: HTTP ${res.status} — ${body}` };
+    }
+    return { ok: true, message: `Model "${name}" unloaded` };
+  }
+
+  /**
    * Download a model.
-   * LM Studio: POST /api/v1/models/download — returns job_id
-   * Ollama:    POST /api/pull (streaming status)
+   * LM Studio: POST /api/v1/models/download → { job_id, status }
+   * Ollama:    POST /api/pull (streaming status updates)
    */
   async downloadModel(modelName: string): Promise<{ jobId?: string; message: string }> {
     if (this.provider === 'lmstudio') {
@@ -176,16 +215,15 @@ export class LocalModelAdapter implements ModelClient {
       return { jobId: data.job_id || data.id, message: `Download started for "${modelName}"` };
     }
 
-    // Ollama: streaming pull
-    return { message: `Use 'agent-cyplex model pull ${modelName}' for Ollama downloads` };
+    return { message: `Use 'agent-cyplex model download ${modelName}' for Ollama downloads` };
   }
 
   /**
-   * Check download progress (LM Studio only).
-   * GET /api/v1/models/download/status/:job_id
+   * Check download progress.
+   * LM Studio: GET /api/v1/models/download-status
    */
   async downloadStatus(jobId: string): Promise<{ status: string; progress?: number; message: string }> {
-    const res = await fetch(`${this.baseUrl}/api/v1/models/download/status/${jobId}`, {
+    const res = await fetch(`${this.baseUrl}/api/v1/models/download-status`, {
       method: 'GET',
       signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
     });
@@ -204,6 +242,10 @@ export class LocalModelAdapter implements ModelClient {
 
   // ── Chat Completion ─────────────────────────────────────────────────────
 
+  /**
+   * Ollama:    POST /api/chat   { model, messages, stream: false, options: { temperature, num_predict } }
+   * LM Studio: POST /v1/chat/completions { model, messages, stream: false, temperature, max_tokens }
+   */
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
     const model = request.model ?? this.model;
     const messages = this.buildMessages(request);
@@ -216,8 +258,8 @@ export class LocalModelAdapter implements ModelClient {
       let body: string;
 
       if (this.provider === 'lmstudio') {
-        // LM Studio: POST /api/v1/chat
-        url = `${this.baseUrl}/api/v1/chat`;
+        // LM Studio: OpenAI-compatible endpoint
+        url = `${this.baseUrl}/v1/chat/completions`;
         body = JSON.stringify({
           model,
           messages,
@@ -226,7 +268,7 @@ export class LocalModelAdapter implements ModelClient {
           stream: false,
         });
       } else {
-        // Ollama: POST /api/chat
+        // Ollama: native endpoint, sampling params inside options
         url = `${this.baseUrl}/api/chat`;
         body = JSON.stringify({
           model,
@@ -254,7 +296,7 @@ export class LocalModelAdapter implements ModelClient {
       const data: any = await res.json();
 
       if (this.provider === 'ollama') {
-        // Ollama native response
+        // Ollama native response format
         return {
           id: `ollama-${Date.now()}`,
           content: data.message?.content ?? '',
@@ -268,7 +310,7 @@ export class LocalModelAdapter implements ModelClient {
         };
       }
 
-      // LM Studio response (OpenAI-compatible format)
+      // LM Studio: OpenAI-compatible response format
       const choice = data.choices?.[0];
       return {
         id: data.id ?? `lmstudio-${Date.now()}`,
@@ -290,6 +332,10 @@ export class LocalModelAdapter implements ModelClient {
 
   // ── Streaming ───────────────────────────────────────────────────────────
 
+  /**
+   * Ollama:    POST /api/chat with stream: true → raw JSON lines
+   * LM Studio: POST /v1/chat/completions with stream: true → SSE "data: " lines
+   */
   async *stream(request: CompletionRequest): AsyncIterable<CompletionChunk> {
     const model = request.model ?? this.model;
     const messages = this.buildMessages(request);
@@ -302,7 +348,7 @@ export class LocalModelAdapter implements ModelClient {
       let body: string;
 
       if (this.provider === 'lmstudio') {
-        url = `${this.baseUrl}/api/v1/chat`;
+        url = `${this.baseUrl}/v1/chat/completions`;
         body = JSON.stringify({
           model,
           messages,
@@ -348,7 +394,6 @@ export class LocalModelAdapter implements ModelClient {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
 
@@ -357,7 +402,7 @@ export class LocalModelAdapter implements ModelClient {
           if (!trimmed) continue;
 
           if (this.provider === 'ollama') {
-            // Ollama streams JSON objects per line (no SSE prefix)
+            // Ollama: raw JSON lines, no prefix
             try {
               const data = JSON.parse(trimmed);
               if (data.done) return;
@@ -366,26 +411,22 @@ export class LocalModelAdapter implements ModelClient {
                 delta: data.message?.content ?? '',
               };
             } catch { /* skip malformed */ }
-            continue;
-          }
+          } else {
+            // LM Studio: SSE format with "data: " prefix
+            if (!trimmed.startsWith('data: ')) continue;
+            const payload = trimmed.slice(6);
+            if (payload === '[DONE]') return;
 
-          // LM Studio: SSE format with "data: " prefix
-          if (!trimmed.startsWith('data: ')) continue;
-          const payload = trimmed.slice(6);
-          if (payload === '[DONE]') return;
-
-          try {
-            const data = JSON.parse(payload);
-            const choice = data.choices?.[0];
-            if (!choice) continue;
-
-            yield {
-              id: data.id ?? `lmstudio-${Date.now()}`,
-              delta: choice.delta?.content ?? '',
-              ...(choice.finish_reason ? { finish_reason: choice.finish_reason } : {}),
-            };
-          } catch {
-            // Skip malformed JSON
+            try {
+              const data = JSON.parse(payload);
+              const choice = data.choices?.[0];
+              if (!choice) continue;
+              yield {
+                id: data.id ?? `lmstudio-${Date.now()}`,
+                delta: choice.delta?.content ?? '',
+                ...(choice.finish_reason ? { finish_reason: choice.finish_reason } : {}),
+              };
+            } catch { /* skip malformed */ }
           }
         }
       }

@@ -137,6 +137,50 @@ export function registerModelCommands(program: Command): void {
       }
     });
 
+  model.command('running').description('List currently loaded/running models')
+    .option('--provider <name>', 'Filter by provider (ollama or lmstudio)')
+    .action(async (opts) => {
+      const providers: ('ollama' | 'lmstudio')[] = opts.provider
+        ? [opts.provider]
+        : ['ollama', 'lmstudio'];
+
+      for (const p of providers) {
+        const config = getProviderConfig(p);
+        const adapter = new LocalModelAdapter(config);
+        const label = p === 'ollama' ? 'Ollama' : 'LM Studio';
+
+        console.log(`\n${BOLD}${label}${NC} — running models:`);
+        try {
+          const models = await adapter.listRunningModels();
+          if (models.length > 0) {
+            for (const m of models) console.log(`  ${GREEN}●${NC} ${m}`);
+          } else {
+            console.log(`  ${DIM}No models currently loaded${NC}`);
+          }
+        } catch (err: any) {
+          console.log(`  ${RED}[x]${NC} ${err.message}`);
+        }
+      }
+      console.log('');
+    });
+
+  model.command('unload [model]').description('Unload a model from memory')
+    .option('--provider <name>', 'Provider (ollama or lmstudio)', 'ollama')
+    .action(async (modelName, opts) => {
+      const config = getProviderConfig(opts.provider);
+      const adapter = new LocalModelAdapter(config);
+      const label = opts.provider === 'ollama' ? 'Ollama' : 'LM Studio';
+
+      const name = modelName || config.model;
+      console.log(`${CYAN}[*]${NC} Unloading "${name}" from ${label}...`);
+      const result = await adapter.unloadModel(name);
+      if (result.ok) {
+        console.log(`${GREEN}[+]${NC} ${result.message}`);
+      } else {
+        console.log(`${RED}[x]${NC} ${result.message}`);
+      }
+    });
+
   model.command('download <model>').description('Download a model')
     .option('--provider <name>', 'Provider (ollama or lmstudio)', 'lmstudio')
     .action(async (modelName, opts) => {
