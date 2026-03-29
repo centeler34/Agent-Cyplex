@@ -3,6 +3,8 @@
  * Cyplex CLI — Thin client that connects to the daemon Unix socket.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { Command } from 'commander';
 import { registerDaemonCommands } from './commands/daemon_cmd.js';
 import { registerAgentCommands } from './commands/agent_cmd.js';
@@ -16,8 +18,28 @@ import { registerKeysCommands } from './commands/keys_cmd.js';
 import { registerModelCommands } from './commands/model_cmd.js';
 import { isFirstRun, runSetupWizard } from './setup_wizard.js';
 
+function loadEnvFile(): void {
+  const envPath = path.join(process.env.HOME || '~', '.cyplex', '.env');
+  if (!fs.existsSync(envPath)) return;
+  const content = fs.readFileSync(envPath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (value && !process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
 async function main(): Promise<void> {
-  // Check for first-run setup before anything else
+  // Load .env before anything else
+  loadEnvFile();
+
+  // Check for first-run setup
   const args = process.argv.slice(2);
   const isSetupCommand = args[0] === 'setup';
 
