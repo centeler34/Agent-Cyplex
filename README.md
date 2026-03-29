@@ -1,0 +1,424 @@
+# Agent Cyplex
+
+**Multi-agent AI orchestration CLI terminal for security researchers, developers, and power users.**
+
+Agent Cyplex enables coordinated AI assistance across complex, parallelizable workflows — from network reconnaissance and digital forensics to code review and threat intelligence — all from a single terminal interface.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Security Implementation](#security-implementation)
+- [Supported AI Providers](#supported-ai-providers)
+- [Installation](#installation)
+  - [Quick Install (Linux)](#quick-install-linux)
+  - [Manual Install](#manual-install)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Agent Roles](#agent-roles)
+- [Skill System](#skill-system)
+- [Bot Integrations](#bot-integrations)
+- [Project Structure](#project-structure)
+- [License](#license)
+
+---
+
+## Features
+
+- **CLI-first** — Full terminal interface with interactive REPL, no GUI required
+- **Multi-agent orchestration** — A central "Agentic" orchestrator decomposes tasks, delegates to specialized subordinate agents, and synthesizes results
+- **Model-agnostic** — Route tasks to Anthropic Claude, OpenAI GPT, Google Gemini, Ollama, or LM Studio
+- **OS-level sandboxing** — Agents are confined to assigned workspaces using Linux namespaces, seccomp, and Bubblewrap
+- **Hash-chained audit logs** — Tamper-evident, append-only SHA-256 chained audit trail for every agent action
+- **Encrypted keystore** — API keys and secrets encrypted at rest with Argon2id key derivation
+- **Permission enforcement** — Fine-grained per-agent policies for filesystem, network, API access, and inter-agent messaging
+- **YAML-based skills** — Modular, extensible skill definitions for recon, code analysis, forensics, threat intel, and reporting
+- **Persistent daemon** — Background daemon with Unix socket IPC; tasks survive CLI disconnection
+- **Bot integrations** — Telegram, Discord, and WhatsApp adapters for remote task submission
+- **Local AI support** — Full offline operation with Ollama or LM Studio, including SSH tunnel management for remote inference hosts
+- **Cost tracking** — Per-agent, per-session token usage and cost breakdown
+
+---
+
+## Architecture
+
+```
+                          +------------------+
+                          |     CLI / REPL   |
+                          |   (commander.js) |
+                          +--------+---------+
+                                   |
+                          Unix Domain Socket
+                                   |
+                          +--------+---------+
+                          |      Daemon      |
+                          | (process manager |
+                          |  heartbeat, IPC) |
+                          +--------+---------+
+                                   |
+                          +--------+---------+
+                          |     Agentic      |
+                          |  (orchestrator)  |
+                          | intent parsing   |
+                          | task decompose   |
+                          | result synthesis |
+                          +--------+---------+
+                                   |
+              +--------------------+--------------------+
+              |          |         |         |          |
+         +----+----+ +---+---+ +--+---+ +---+---+ +---+---+
+         |  Recon  | | Code  | |Forensic| |OSINT | |Report |
+         |  Agent  | | Agent | | Agent | |Agent | |Agent  |
+         +---------+ +-------+ +-------+ +------+ +-------+
+              |          |         |         |          |
+              +----------+---------+---------+----------+
+                                   |
+                          +--------+---------+
+                          |  Gateway Router  |
+                          | rate limiting    |
+                          | cost tracking    |
+                          | fallback routing |
+                          +--------+---------+
+                                   |
+              +--------------------+--------------------+
+              |          |         |         |          |
+         Anthropic   OpenAI    Gemini    Ollama    LM Studio
+```
+
+### How It Works
+
+1. **User submits a task** via CLI, REPL, or bot message
+2. **Agentic** (the orchestrator) parses intent from natural language
+3. Tasks are **decomposed** into discrete subtasks with dependency ordering
+4. Subtasks are **delegated** to specialized agents running concurrently
+5. Each agent executes within its **sandbox** using assigned **skills**
+6. The **Gateway Router** handles all model API calls with rate limiting and fallback
+7. Results are **aggregated and synthesized** back to the user
+8. Every action is recorded in the **hash-chained audit log**
+
+---
+
+## Security Implementation
+
+Agent Cyplex implements defense-in-depth security across multiple layers, all built in Rust for memory safety and performance:
+
+### Sandbox Isolation (`rust/cyplex-sandbox`)
+
+- **Linux Namespaces** — Each agent process runs in isolated PID, mount, network, and user namespaces
+- **Bubblewrap Integration** — Leverages `bwrap` for lightweight containerization without requiring root
+- **Seccomp Filtering** — Restricts available syscalls to a minimal allowlist per agent role
+- **Path Guards** — Filesystem access is confined to the agent's assigned workspace directory; all path traversal attempts are blocked
+
+### Audit Trail (`rust/cyplex-audit`)
+
+- **SHA-256 Hash Chain** — Each log entry includes the hash of the previous entry, creating a tamper-evident chain
+- **Append-Only Writer** — Log files are opened in append mode; entries cannot be modified or deleted
+- **Sensitive Data Redaction** — API keys, tokens, passwords, and other secrets are automatically masked before logging
+- **Structured Entries** — Every entry records: timestamp, agent ID, action type, target, payload hash, and chain hash
+
+### Encrypted Keystore (`rust/cyplex-keystore`)
+
+- **Argon2id Key Derivation** — Master key derived from user passphrase using Argon2id (memory-hard KDF resistant to GPU/ASIC attacks)
+- **Authenticated Encryption** — Keys encrypted at rest using modern AEAD ciphers
+- **Memory Zeroization** — Sensitive key material is zeroed from memory immediately after use via the `zeroize` crate
+
+### Permission System (`rust/cyplex-permissions`)
+
+- **Policy-Based Access Control** — YAML-defined permission policies per agent specifying allowed filesystem paths, network hosts/ports, API keys, and inter-agent communication channels
+- **Runtime Evaluation** — Every agent action is checked against its policy before execution
+- **Network Guards** — Outbound network access is restricted to explicitly allowed hosts and ports
+
+### Cryptographic Utilities (`rust/cyplex-crypto`)
+
+- **Ed25519 Signatures** — EdDSA digital signatures for skill verification and inter-agent message authentication
+- **HMAC Authentication** — Message authentication codes for IPC protocol integrity
+- **Secure RNG** — Cryptographically secure random number generation for tokens and nonces
+- **Zeroize** — All cryptographic material is securely wiped from memory after use
+
+### IPC Security (`rust/cyplex-ipc`)
+
+- **Unix Domain Sockets** — Communication restricted to local machine; no network exposure
+- **Length-Prefixed JSON Protocol** — Structured message framing prevents injection attacks
+- **Session Tokens** — Cryptographically generated session tokens for client authentication
+- **Prompt Injection Detection** — Skill inputs are scanned for prompt injection patterns before execution
+
+### Skill Security
+
+- **Signature Verification** — Skills can be cryptographically signed and verified before loading
+- **YARA Scanning** — Skill definitions are scanned against YARA rules to detect malicious patterns
+- **Quarantine System** — Suspicious skills are isolated in a quarantine directory for manual review before approval
+
+---
+
+## Supported AI Providers
+
+| Provider | Type | Models | Cost |
+|----------|------|--------|------|
+| **Anthropic** | Cloud | Claude 4 Opus, Sonnet, Haiku | Pay-per-token |
+| **OpenAI** | Cloud | GPT-4o, GPT-4, GPT-3.5 | Pay-per-token |
+| **Google Gemini** | Cloud | Gemini Pro, Ultra | Pay-per-token |
+| **Ollama** | Local | Any GGUF model | Free |
+| **LM Studio** | Local | Any supported model | Free |
+
+Local providers can run on the same machine or on a remote host via automatic SSH tunnels managed by the daemon.
+
+---
+
+## Installation
+
+### Quick Install (Linux)
+
+Paste this single command into your terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/centeler34/Agent-cyplex/main/scripts/install-cyplex.sh | bash
+```
+
+This will:
+1. Install all required system dependencies (Node.js, Rust, Go, Python)
+2. Clone the repository
+3. Build all components (TypeScript, Rust, Go, Python)
+4. Install `agent-cyplex` as a system-wide command
+5. Create the configuration directory at `~/.cyplex/`
+
+After installation, just type:
+
+```bash
+agent-cyplex
+```
+
+### Manual Install
+
+#### Prerequisites
+
+- **Node.js** >= 20.0.0 (`https://nodejs.org/`)
+- **Rust** (latest stable via `https://rustup.rs/`)
+- **Go** >= 1.22 (`https://go.dev/dl/`)
+- **Python** >= 3.11 (`https://www.python.org/`)
+- **Linux** with kernel >= 5.10 (for namespace/seccomp support)
+
+#### Steps
+
+```bash
+# Clone the repository
+git clone https://github.com/centeler34/Agent-cyplex.git
+cd Agent-cyplex
+
+# Install Node.js dependencies
+npm install
+
+# Build Rust security crates
+cargo build --release
+
+# Build Go utilities
+mkdir -p dist
+cd go/ssh-tunnel && go build -o ../../dist/ssh-tunnel . && cd ../..
+cd go/net-probe && go build -o ../../dist/net-probe . && cd ../..
+
+# Install Python dependencies
+pip install -r python/forensics-service/requirements.txt
+pip install -r python/osint-utils/requirements.txt
+
+# Build TypeScript
+npx tsc
+
+# Create config directories
+mkdir -p ~/.cyplex/{logs,audit,workspaces,quarantine/{pending,approved,rejected}}
+
+# Link the command globally
+npm link
+```
+
+---
+
+## Configuration
+
+Copy the example config and environment files:
+
+```bash
+cp config/config.example.yaml ~/.cyplex/config.yaml
+cp .env.example .env
+```
+
+Edit `.env` to add your API keys:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GOOGLE_AI_API_KEY=AI...
+
+# Optional: Bot tokens
+TELEGRAM_BOT_TOKEN=...
+DISCORD_BOT_TOKEN=...
+
+# Optional: Local AI endpoints
+OLLAMA_BASE_URL=http://localhost:11434
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+```
+
+See [config/config.example.yaml](config/config.example.yaml) for full daemon, gateway, agent, and security configuration options.
+
+---
+
+## Usage
+
+### Start the Daemon
+
+```bash
+agent-cyplex daemon start       # Start background daemon
+agent-cyplex daemon status      # Check daemon health
+agent-cyplex daemon stop        # Graceful shutdown
+```
+
+### Interactive REPL
+
+```bash
+agent-cyplex                    # Launch interactive mode
+```
+
+### Task Management
+
+```bash
+agent-cyplex task submit "Enumerate subdomains for example.com"
+agent-cyplex task status <task-id>
+agent-cyplex task cancel <task-id>
+```
+
+### Agent Management
+
+```bash
+agent-cyplex agent list         # List all agents and their status
+agent-cyplex agent status recon # Check specific agent
+```
+
+### Skill Management
+
+```bash
+agent-cyplex skill list         # List available skills
+agent-cyplex skill load ./custom-skill.yaml
+agent-cyplex skill verify ./skill.yaml
+```
+
+### Model Management
+
+```bash
+agent-cyplex model list         # List configured providers
+agent-cyplex model test ollama  # Test provider connectivity
+```
+
+### Audit Logs
+
+```bash
+agent-cyplex audit query --agent recon --last 1h
+```
+
+### Key Management
+
+```bash
+agent-cyplex keys set ANTHROPIC_API_KEY
+agent-cyplex keys list
+```
+
+### Bot Management
+
+```bash
+agent-cyplex bot enable telegram
+agent-cyplex bot disable discord
+```
+
+### Session Management
+
+```bash
+agent-cyplex session list
+agent-cyplex session archive <session-id>
+```
+
+---
+
+## Agent Roles
+
+| Agent | Role | Capabilities |
+|-------|------|-------------|
+| **Agentic** | Orchestrator | Task decomposition, delegation, result synthesis |
+| **Recon** | Reconnaissance | Subdomain enumeration, DNS sweeps, port scanning, fingerprinting |
+| **Code** | Code Analysis | Vulnerability review, dependency audit, decompilation analysis |
+| **Exploit Research** | CVE Research | CVE chain building, ATT&CK mapping, patch diff analysis |
+| **Forensics** | Digital Forensics | PCAP analysis, malware static analysis, memory forensics, log timelines |
+| **OSINT Analyst** | Intelligence | Breach lookups, certificate transparency, entity graph building |
+| **Threat Intel** | Threat Intelligence | Actor profiling, IoC ingestion, STIX export |
+| **Report** | Documentation | Pentest reports, executive summaries, finding writeups |
+| **Monitor** | Monitoring | Continuous asset monitoring and alerting |
+| **Scribe** | Documentation | Session documentation and note-taking |
+
+---
+
+## Skill System
+
+Skills are modular YAML definitions that give agents specific capabilities. Located in the `skills/` directory:
+
+```
+skills/
+  recon/          subdomain_enum, dns_sweep, shodan_sweep, tech_fingerprint, wayback_crawl
+  code/           vulnerability_review, decompile_analysis, dependency_audit, poc_generator
+  exploit_research/ cve_chain_builder, attck_mapper, patch_diff
+  forensics/      pcap_analysis, malware_static, log_timeline
+  threat_intel/   actor_profile, ioc_ingest, stix_export
+  report/         pentest_report, executive_summary, finding_writeup
+```
+
+Custom skills can be loaded at runtime and are verified via cryptographic signatures and YARA scanning before execution.
+
+---
+
+## Bot Integrations
+
+Agent Cyplex supports receiving tasks from chat platforms:
+
+- **Telegram** — via grammy SDK
+- **Discord** — via discord.js
+- **WhatsApp** — via @whiskeysockets/baileys
+
+All incoming messages are normalized to a unified format, routed through the Agentic orchestrator, and responses are sent back to the originating channel. Bot access is controlled via allowlists and rate limiting.
+
+---
+
+## Project Structure
+
+```
+Agent-cyplex/
++-- src/                    TypeScript core
+|   +-- orchestrator/       Task decomposition & orchestration
+|   +-- gateway/            Multi-provider AI routing
+|   +-- cli/                CLI entry point & commands
+|   +-- daemon/             Background daemon & IPC
+|   +-- agents/             Specialized agent implementations
+|   +-- bots/               Chat platform adapters
+|   +-- security/           TypeScript bridges to Rust security layer
+|   +-- sessions/           Session & workspace management
+|   +-- skills/             Skill loading, execution & verification
+|   +-- types/              Shared type definitions
++-- rust/                   Rust security infrastructure
+|   +-- cyplex-sandbox/     OS-level process sandboxing
+|   +-- cyplex-audit/       Hash-chained audit logging
+|   +-- cyplex-keystore/    Encrypted key storage
+|   +-- cyplex-ipc/         Unix socket IPC
+|   +-- cyplex-permissions/ Policy-based access control
+|   +-- cyplex-crypto/      Cryptographic utilities
++-- go/                     Go utilities
+|   +-- net-probe/          Network reconnaissance tools
+|   +-- ssh-tunnel/         SSH tunnel management
++-- python/                 Python microservices
+|   +-- forensics-service/  Digital forensics analysis
+|   +-- osint-utils/        OSINT data gathering
++-- skills/                 YAML skill definitions
++-- config/                 Configuration templates
++-- scripts/                Build & install scripts
+```
+
+---
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file for details.

@@ -1,0 +1,41 @@
+skill:
+  id: threat_intel.actor_profile
+  name: "Threat Actor Profiling"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Build and maintain threat actor profiles with behavioral patterns."
+
+  compatible_agents:
+    - threat_intel
+
+  permissions_required:
+    fs.write:
+      - "workspaces/threat_intel/"
+
+  inputs:
+    - name: actor_name
+      type: string
+      required: true
+    - name: known_iocs
+      type: list
+      required: false
+
+  outputs:
+    - name: profile
+      type: object
+
+  steps:
+    - name: build_profile
+      instruction: |
+        Build a comprehensive threat actor profile for {actor_name}:
+        - Known aliases and attribution
+        - Targeted sectors and geographies
+        - TTPs mapped to MITRE ATT&CK
+        - Known infrastructure patterns
+        - Historical campaigns
+        - Attribution confidence score with reasoning
+
+  tags:
+    - threat_intel
+    - actor
+    - profiling

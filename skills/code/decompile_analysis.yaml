@@ -1,0 +1,38 @@
+skill:
+  id: code.decompile_analysis
+  name: "Decompiler Output Analysis"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Analyze Ghidra or IDA decompiler output for security-relevant patterns."
+
+  compatible_agents:
+    - code
+
+  permissions_required:
+    fs.write:
+      - "workspaces/code/"
+
+  inputs:
+    - name: decompiled_path
+      type: string
+      required: true
+
+  outputs:
+    - name: analysis
+      type: object
+
+  steps:
+    - name: analyze_decompiled
+      instruction: |
+        Analyze the decompiled code at {decompiled_path} for:
+        - Dangerous function calls (strcpy, sprintf, gets, system)
+        - Hardcoded credentials or keys
+        - Cryptographic implementation weaknesses
+        - Buffer overflow potential
+        - Format string vulnerabilities
+        - Race conditions
+
+  tags:
+    - code
+    - reverse_engineering
+    - binary

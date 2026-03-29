@@ -1,0 +1,52 @@
+skill:
+  id: recon.dns_sweep
+  name: "Full DNS Record Sweep"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: >
+    Perform a comprehensive DNS record sweep including A, AAAA, CNAME, MX,
+    TXT, SPF, DMARC, NS, SOA, and PTR records for a target domain.
+
+  compatible_agents:
+    - recon
+
+  permissions_required:
+    network.allow:
+      - "dns.google"
+    fs.write:
+      - "workspaces/recon/"
+
+  inputs:
+    - name: domain
+      type: string
+      required: true
+
+  outputs:
+    - name: dns_records
+      type: object
+    - name: report_path
+      type: string
+
+  steps:
+    - name: resolve_all_records
+      instruction: |
+        Resolve all DNS record types for {domain}:
+        A, AAAA, CNAME, MX, TXT, NS, SOA, PTR, SRV, CAA.
+        Parse SPF and DMARC from TXT records.
+
+    - name: analyze_security
+      instruction: |
+        Analyze DNS security posture:
+        - Check for SPF record presence and strength
+        - Check for DMARC record and policy
+        - Check for DNSSEC
+        - Identify mail servers and their security
+
+    - name: write_findings
+      instruction: |
+        Write all DNS records and analysis to workspaces/recon/{domain}_dns.yaml.
+
+  tags:
+    - recon
+    - dns
+    - passive

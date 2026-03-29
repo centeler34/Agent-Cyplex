@@ -1,0 +1,38 @@
+skill:
+  id: recon.wayback_crawl
+  name: "Wayback Machine Historical Endpoint Crawl"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Crawl the Wayback Machine for historical endpoints, parameters, and content."
+
+  compatible_agents:
+    - recon
+
+  permissions_required:
+    network.allow:
+      - "web.archive.org"
+    fs.write:
+      - "workspaces/recon/"
+
+  inputs:
+    - name: domain
+      type: string
+      required: true
+
+  outputs:
+    - name: endpoints
+      type: list
+    - name: parameters
+      type: list
+
+  steps:
+    - name: crawl_wayback
+      instruction: |
+        Query the Wayback Machine CDX API for all archived URLs for {domain}.
+        Extract unique endpoints, query parameters, and file paths.
+        Identify potentially sensitive endpoints (admin panels, API endpoints, config files).
+
+  tags:
+    - recon
+    - osint
+    - passive

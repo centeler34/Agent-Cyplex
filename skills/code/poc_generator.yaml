@@ -1,0 +1,39 @@
+skill:
+  id: code.poc_generator
+  name: "PoC Exploit Scaffolding"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Generate proof-of-concept exploit code for a described vulnerability."
+
+  compatible_agents:
+    - code
+
+  permissions_required:
+    fs.write:
+      - "workspaces/code/"
+    fs.execute: true
+
+  inputs:
+    - name: vulnerability
+      type: string
+      required: true
+      description: "Description of the vulnerability to exploit"
+    - name: language
+      type: string
+      default: "python"
+
+  outputs:
+    - name: poc_path
+      type: string
+
+  steps:
+    - name: generate_poc
+      instruction: |
+        Generate a proof-of-concept exploit in {language} for: {vulnerability}.
+        Include clear comments, safe defaults, and usage instructions.
+        The PoC should demonstrate the vulnerability without causing damage.
+
+  tags:
+    - code
+    - exploit
+    - poc

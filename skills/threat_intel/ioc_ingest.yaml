@@ -1,0 +1,40 @@
+skill:
+  id: threat_intel.ioc_ingest
+  name: "IOC Ingestion and Normalization"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Ingest, normalize, and deduplicate indicators of compromise from various feeds."
+
+  compatible_agents:
+    - threat_intel
+
+  permissions_required:
+    fs.write:
+      - "workspaces/threat_intel/"
+
+  inputs:
+    - name: ioc_source
+      type: string
+      required: true
+      description: "Path to IOC feed data or URL"
+    - name: format
+      type: string
+      default: "stix"
+
+  outputs:
+    - name: normalized_iocs
+      type: list
+
+  steps:
+    - name: ingest
+      instruction: |
+        Parse IOCs from {ioc_source} in {format} format.
+        Normalize all indicators to a standard format:
+        - IP addresses, domains, URLs, file hashes, email addresses
+        - Deduplicate across the existing IOC database
+        - Tag with source, confidence, and first/last seen dates
+
+  tags:
+    - threat_intel
+    - ioc
+    - ingestion

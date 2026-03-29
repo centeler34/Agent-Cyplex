@@ -1,0 +1,37 @@
+skill:
+  id: forensics.pcap_analysis
+  name: "PCAP Anomaly Detection"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Analyze PCAP files for network anomalies and suspicious traffic."
+
+  compatible_agents:
+    - forensics
+
+  permissions_required:
+    fs.write:
+      - "workspaces/forensics/"
+
+  inputs:
+    - name: pcap_path
+      type: string
+      required: true
+
+  outputs:
+    - name: analysis
+      type: object
+
+  steps:
+    - name: analyze_pcap
+      instruction: |
+        Analyze the PCAP file at {pcap_path}:
+        - Protocol distribution and traffic volume
+        - Unusual port activity
+        - DNS query analysis
+        - Potential C2 communication patterns
+        - Data exfiltration indicators
+
+  tags:
+    - forensics
+    - pcap
+    - network

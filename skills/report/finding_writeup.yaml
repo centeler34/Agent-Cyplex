@@ -1,0 +1,39 @@
+skill:
+  id: report.finding_writeup
+  name: "Individual Finding Documentation"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Document a single security finding with full technical detail."
+
+  compatible_agents:
+    - report
+
+  permissions_required:
+    fs.write:
+      - "workspaces/reports/"
+
+  inputs:
+    - name: finding
+      type: object
+      required: true
+
+  outputs:
+    - name: writeup
+      type: string
+
+  steps:
+    - name: document_finding
+      instruction: |
+        Write a complete finding writeup including:
+        - Title and severity (with CVSS v3.1 score)
+        - CWE ID and OWASP category
+        - Description of the vulnerability
+        - Impact analysis (confidentiality, integrity, availability)
+        - Steps to reproduce
+        - Evidence references
+        - Remediation steps with code examples where applicable
+
+  tags:
+    - report
+    - finding
+    - documentation

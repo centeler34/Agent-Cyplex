@@ -1,0 +1,49 @@
+skill:
+  id: recon.shodan_sweep
+  name: "Shodan Bulk IP Lookup"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Query Shodan for open ports, services, and vulnerabilities on a list of IPs."
+
+  compatible_agents:
+    - recon
+
+  permissions_required:
+    network.allow:
+      - "api.shodan.io"
+    fs.write:
+      - "workspaces/recon/"
+    api.keys:
+      - shodan_api_key
+
+  inputs:
+    - name: ips
+      type: list
+      required: true
+      description: "List of IP addresses to query"
+
+  outputs:
+    - name: shodan_results
+      type: object
+
+  steps:
+    - name: query_shodan
+      instruction: |
+        For each IP in {ips}, query the Shodan API for:
+        - Open ports and service banners
+        - Known CVEs and vulnerabilities
+        - ASN and organization info
+        - SSL certificate details
+      requires_key: shodan_api_key
+
+    - name: correlate
+      instruction: |
+        Correlate Shodan results across IPs to identify:
+        - Shared hosting patterns
+        - Common services and versions
+        - High-risk exposures
+
+  tags:
+    - recon
+    - shodan
+    - active

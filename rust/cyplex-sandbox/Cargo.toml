@@ -1,0 +1,16 @@
+[package]
+name = "cyplex-sandbox"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Agent process sandboxing for Agent Cyplex"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+nix = { version = "0.29", features = ["sched", "signal", "process"] }
+libc = "0.2"

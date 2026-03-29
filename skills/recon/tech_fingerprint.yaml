@@ -1,0 +1,54 @@
+skill:
+  id: recon.tech_fingerprint
+  name: "Technology Stack Fingerprinting"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: >
+    Fingerprint the technology stack of a target web application using HTTP
+    headers, response patterns, favicon hashing, and known signatures.
+
+  compatible_agents:
+    - recon
+
+  permissions_required:
+    network.allow:
+      - "*.target.com"
+    fs.write:
+      - "workspaces/recon/"
+
+  inputs:
+    - name: url
+      type: string
+      required: true
+      description: "Target URL"
+
+  outputs:
+    - name: technologies
+      type: list
+    - name: report_path
+      type: string
+
+  steps:
+    - name: http_headers
+      instruction: |
+        Analyze HTTP response headers for technology indicators:
+        Server, X-Powered-By, X-AspNet-Version, X-Generator, etc.
+
+    - name: favicon_hash
+      instruction: |
+        Download favicon.ico, compute its MurmurHash3, and look up
+        known favicon hashes in the Shodan favicon database.
+
+    - name: body_analysis
+      instruction: |
+        Analyze HTML response body for technology signatures:
+        meta generators, JavaScript library fingerprints, CSS framework patterns.
+
+    - name: write_findings
+      instruction: |
+        Write technology fingerprint results to workspaces/recon/{domain}_tech.yaml.
+
+  tags:
+    - recon
+    - fingerprint
+    - passive

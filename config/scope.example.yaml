@@ -1,0 +1,27 @@
+engagement:
+  name: "Client X Assessment Q1 2026"
+  id: "eng-clientx-2026q1"
+
+scope:
+  in_scope:
+    domains:
+      - "*.target.com"
+      - "api.target.com"
+    ip_ranges:
+      - "203.0.113.0/24"
+    github_orgs:
+      - "target-org"
+  out_of_scope:
+    domains:
+      - "hr.target.com"
+      - "payroll.target.com"
+
+constraints:
+  no_active_exploitation: false
+  no_dos: true
+  report_criticals_immediately: true
+  max_request_rate_per_second: 10
+
+contacts:
+  emergency: "security@target.com"
+  rules_of_engagement: "./roe.pdf"

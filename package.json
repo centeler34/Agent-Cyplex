@@ -1,0 +1,50 @@
+{
+  "name": "agent-cyplex",
+  "version": "0.1.0",
+  "description": "Multi-agent AI orchestration CLI terminal for security researchers",
+  "type": "module",
+  "main": "dist/cli/cli.js",
+  "bin": {
+    "cyplex": "dist/cli/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/cli/cli.ts",
+    "start": "node dist/cli/cli.js",
+    "daemon:start": "node dist/daemon/daemon.js",
+    "lint": "eslint src/ --ext .ts,.tsx",
+    "format": "prettier --write 'src/**/*.{ts,tsx}'"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/generative-ai": "^0.21.0",
+    "@whiskeysockets/baileys": "^6.7.0",
+    "better-sqlite3": "^11.0.0",
+    "commander": "^13.0.0",
+    "discord.js": "^14.16.0",
+    "grammy": "^1.30.0",
+    "ink": "^5.1.0",
+    "ink-spinner": "^2.0.0",
+    "openai": "^4.77.0",
+    "p-queue": "^8.0.0",
+    "react": "^18.3.0",
+    "ssh2": "^1.16.0",
+    "winston": "^3.17.0",
+    "yaml": "^2.6.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/ssh2": "^1.15.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

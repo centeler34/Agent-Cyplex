@@ -1,0 +1,37 @@
+skill:
+  id: threat_intel.stix_export
+  name: "STIX Bundle Export"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Export intelligence as a STIX 2.1 bundle for sharing."
+
+  compatible_agents:
+    - threat_intel
+
+  permissions_required:
+    fs.write:
+      - "workspaces/threat_intel/"
+
+  inputs:
+    - name: iocs
+      type: list
+      required: true
+    - name: bundle_name
+      type: string
+      required: true
+
+  outputs:
+    - name: stix_path
+      type: string
+
+  steps:
+    - name: build_stix
+      instruction: |
+        Convert the IOCs and intelligence into a STIX 2.1 bundle.
+        Include proper SDO types (indicator, malware, attack-pattern, etc.)
+        and SRO relationships. Write to workspaces/threat_intel/{bundle_name}.json.
+
+  tags:
+    - threat_intel
+    - stix
+    - export

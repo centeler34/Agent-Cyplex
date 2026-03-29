@@ -1,0 +1,14 @@
+[package]
+name = "cyplex-crypto"
+version = "0.1.0"
+edition = "2021"
+description = "Shared cryptographic primitives for Agent Cyplex"
+
+[dependencies]
+hmac = "0.12"
+sha2 = "0.10"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+zeroize = { version = "1", features = ["derive"] }
+rand = "0.8"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }

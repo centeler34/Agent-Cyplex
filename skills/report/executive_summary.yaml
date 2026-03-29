@@ -1,0 +1,38 @@
+skill:
+  id: report.executive_summary
+  name: "Executive Summary Writing"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Write a non-technical executive summary of security findings."
+
+  compatible_agents:
+    - report
+
+  permissions_required:
+    fs.write:
+      - "workspaces/reports/"
+
+  inputs:
+    - name: findings_path
+      type: string
+      required: true
+
+  outputs:
+    - name: summary
+      type: string
+
+  steps:
+    - name: write_summary
+      instruction: |
+        Write a clear, non-technical executive summary covering:
+        - Overall security posture assessment
+        - Critical and high-severity finding count
+        - Key business risks identified
+        - Top 3 recommended remediation priorities
+        - Timeline recommendations
+        Keep language accessible for C-level audience.
+
+  tags:
+    - report
+    - executive
+    - summary

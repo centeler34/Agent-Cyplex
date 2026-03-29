@@ -1,0 +1,50 @@
+type: object
+description: "Agent permission policy schema"
+properties:
+  fs.read:
+    type: array
+    items:
+      type: string
+    description: "Allowed read paths (glob patterns)"
+  fs.write:
+    type: array
+    items:
+      type: string
+    description: "Allowed write paths"
+  fs.execute:
+    type: boolean
+    description: "Whether the agent may spawn subprocesses"
+  execute.allowed_binaries:
+    type: array
+    items:
+      type: string
+    description: "Binaries the agent is allowed to execute"
+  network.allow:
+    type: array
+    items:
+      type: string
+    description: "Allowed outbound hosts (FQDN or CIDR)"
+  network.deny:
+    type: array
+    items:
+      type: string
+    description: "Denied hosts (evaluated before allow)"
+  api.providers:
+    type: array
+    items:
+      type: string
+    description: "Allowed AI provider backends"
+  api.keys:
+    type: array
+    items:
+      type: string
+    description: "Keystore key names this agent may access"
+  agent.communicate:
+    type: array
+    items:
+      type: string
+    description: "Other agents this agent may message"
+  agent.spawn:
+    type: boolean
+    description: "Whether this agent may request new agent spawning"
+required: []

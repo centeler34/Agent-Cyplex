@@ -1,0 +1,127 @@
+cyplex:
+  version: "1.0"
+
+  daemon:
+    socket_path: "/tmp/cyplex.sock"
+    pid_file: "/tmp/cyplex.pid"
+    heartbeat_interval_ms: 5000
+    log_level: "info"
+    log_path: "~/.cyplex/logs/"
+
+  sessions:
+    default_workspace_root: "~/.cyplex/workspaces/"
+    auto_archive_after_days: 90
+
+  gateway:
+    default_provider: "anthropic"
+    fallback_provider: "openai"
+    timeout_ms: 30000
+    max_retries: 3
+    providers:
+      anthropic:
+        model: "claude-sonnet-4-6"
+        key_ref: "anthropic_api_key"
+      openai:
+        model: "gpt-4o"
+        key_ref: "openai_api_key"
+      ollama_local:
+        type: ollama
+        base_url: "http://localhost:11434"
+        model: "llama3.3"
+      lmstudio_local:
+        type: lmstudio
+        base_url: "http://localhost:1234/v1"
+        model: "lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF"
+
+  agents:
+    agentic:
+      enabled: true
+      model_override: "anthropic/claude-opus-4-6"
+      max_concurrent_delegations: 10
+
+    recon:
+      enabled: true
+      workspace: "workspaces/recon/"
+      skills:
+        - recon.subdomain_enum
+        - recon.dns_sweep
+        - recon.tech_fingerprint
+      permissions:
+        network.allow:
+          - "*.shodan.io"
+          - "crt.sh"
+          - "*.censys.io"
+          - "dns.google"
+          - "web.archive.org"
+        fs.write: ["workspaces/recon/"]
+        fs.execute: false
+
+    code:
+      enabled: true
+      workspace: "workspaces/code/"
+      permissions:
+        fs.execute: true
+        execute.allowed_binaries:
+          - "/usr/bin/python3"
+          - "/usr/local/bin/node"
+        network.allow: []
+
+    exploit_research:
+      enabled: true
+      workspace: "workspaces/exploit_research/"
+      permissions:
+        network.allow:
+          - "nvd.nist.gov"
+          - "cve.mitre.org"
+        fs.execute: false
+
+    report:
+      enabled: true
+      workspace: "workspaces/reports/"
+      permissions:
+        fs.write: ["workspaces/reports/"]
+        network.allow: []
+        fs.execute: false
+
+    monitor:
+      enabled: true
+      workspace: "workspaces/monitor/"
+
+    osint_analyst:
+      enabled: true
+      workspace: "workspaces/osint/"
+
+    threat_intel:
+      enabled: true
+      workspace: "workspaces/threat_intel/"
+
+    forensics:
+      enabled: true
+      workspace: "workspaces/forensics/"
+
+    scribe:
+      enabled: true
+      workspace: "workspaces/scribe/"
+
+  bots:
+    telegram:
+      enabled: false
+      token_key_ref: "telegram_bot_token"
+      allowlist: []
+    discord:
+      enabled: false
+      token_key_ref: "discord_bot_token"
+    whatsapp:
+      enabled: false
+
+  security:
+    audit_log_path: "~/.cyplex/audit/audit.jsonl"
+    keystore_path: "~/.cyplex/keystore.enc"
+    kdf: "argon2id"
+    session_token_ttl_hours: 24
+    skill_signature_verification: true
+
+  rate_limits:
+    global_tokens_per_minute: 500000
+    per_agent_tokens_per_minute: 100000
+    bot_messages_per_user_per_minute: 20

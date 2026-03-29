@@ -1,0 +1,42 @@
+skill:
+  id: forensics.log_timeline
+  name: "Log Timeline Reconstruction"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Reconstruct an incident timeline from log files."
+
+  compatible_agents:
+    - forensics
+
+  permissions_required:
+    fs.write:
+      - "workspaces/forensics/"
+
+  inputs:
+    - name: log_paths
+      type: list
+      required: true
+    - name: time_range
+      type: string
+      required: false
+
+  outputs:
+    - name: timeline
+      type: list
+
+  steps:
+    - name: parse_logs
+      instruction: |
+        Parse all log files in {log_paths}. Normalize timestamps.
+        Identify key events: authentication, errors, access patterns, anomalies.
+
+    - name: build_timeline
+      instruction: |
+        Construct a chronological timeline of events.
+        Highlight suspicious sequences and correlate across log sources.
+        Write to workspaces/forensics/timeline.yaml.
+
+  tags:
+    - forensics
+    - timeline
+    - logs

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+dist/
+target/
+__pycache__/
+*.pyc
+.venv/
+
+# Environment & secrets
+.env
+*.enc
+keystore.enc
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Daemon runtime files
+/tmp/cyplex.sock
+/tmp/cyplex.pid
+
+# Workspaces (contain engagement data)
+workspaces/
+
+# Logs
+*.log
+logs/
+
+# Audit logs (sensitive)
+audit/
+
+# Quarantine (may contain malicious files)
+quarantine/
+
+# Claude Code
+.claude/

@@ -1,0 +1,76 @@
+skill:
+  id: recon.subdomain_enum
+  name: "Subdomain Enumeration"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: >
+    Enumerate subdomains of a target domain using certificate transparency,
+    DNS brute force, and OSINT sources.
+
+  compatible_agents:
+    - recon
+    - osint_analyst
+
+  permissions_required:
+    network.allow:
+      - "crt.sh"
+      - "api.shodan.io"
+      - "dns.google"
+    fs.write:
+      - "workspaces/recon/"
+    api.keys:
+      - shodan_api_key
+
+  inputs:
+    - name: domain
+      type: string
+      required: true
+      description: "Target domain (e.g., target.com)"
+    - name: depth
+      type: integer
+      default: 2
+    - name: include_wildcards
+      type: boolean
+      default: false
+
+  outputs:
+    - name: subdomains
+      type: list
+    - name: subdomain_map
+      type: object
+    - name: report_path
+      type: string
+
+  steps:
+    - name: cert_transparency
+      instruction: |
+        Query crt.sh for all certificates issued for {domain} and its wildcards.
+        Extract unique domain names from certificate subject and SAN fields.
+        Deduplicate and normalize results.
+
+    - name: dns_resolution
+      instruction: |
+        For each discovered subdomain, resolve A, AAAA, CNAME, and MX records.
+        Flag subdomains returning NXDOMAIN (subdomain takeover candidates).
+        Note CNAMEs pointing to third-party services.
+
+    - name: shodan_lookup
+      instruction: |
+        For each resolved IP, query Shodan for open ports, service banners,
+        and known vulnerabilities. Correlate with the subdomain list.
+      requires_key: shodan_api_key
+
+    - name: write_findings
+      instruction: |
+        Write findings to workspaces/recon/{domain}_subdomains.yaml
+        including subdomain list, resolution data, and Shodan enrichment.
+
+  on_error:
+    retry: 2
+    fallback: "Return partial results if full enumeration fails"
+
+  tags:
+    - recon
+    - passive
+    - osint
+    - dns

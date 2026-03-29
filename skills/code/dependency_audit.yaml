@@ -1,0 +1,39 @@
+skill:
+  id: code.dependency_audit
+  name: "Dependency Vulnerability Scan"
+  version: "1.0.0"
+  author: "cyplex-core"
+  description: "Scan project dependency files for known vulnerable packages."
+
+  compatible_agents:
+    - code
+
+  permissions_required:
+    fs.write:
+      - "workspaces/code/"
+
+  inputs:
+    - name: manifest_path
+      type: string
+      required: true
+      description: "Path to dependency manifest (package.json, requirements.txt, go.mod, Gemfile)"
+
+  outputs:
+    - name: vulnerabilities
+      type: list
+
+  steps:
+    - name: parse_dependencies
+      instruction: |
+        Parse the dependency manifest at {manifest_path}.
+        List all dependencies with their pinned or range versions.
+
+    - name: check_vulnerabilities
+      instruction: |
+        For each dependency, check for known CVEs and security advisories.
+        Report severity (critical/high/medium/low), CVE IDs, and fix versions.
+
+  tags:
+    - code
+    - dependencies
+    - security
