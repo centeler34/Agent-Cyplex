@@ -284,6 +284,30 @@ agent-cyplex daemon stop        # Graceful shutdown
 agent-cyplex                    # Launch interactive mode
 ```
 
+Inside the REPL, slash commands are available:
+
+| Command | Action |
+|---------|--------|
+| `/update` | Fetch latest updates from GitHub, rebuild all components, and restart |
+| `/setup` | Re-run the setup wizard to reconfigure API keys and settings |
+| `/status` | Query daemon status |
+| `/help` | Show available commands |
+| `exit` | Quit the REPL |
+
+### Updating
+
+Pull the latest patches, rebuild, and restart in one command:
+
+```bash
+agent-cyplex update             # From the command line
+```
+
+Or type `/update` inside the interactive REPL. The updater will:
+1. Fetch the latest commits from GitHub
+2. Show a changelog of what's new
+3. Rebuild TypeScript, Rust, Go, and Python components
+4. Restart the CLI automatically
+
 ### Task Management
 
 ```bash

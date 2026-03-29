@@ -17,6 +17,7 @@ import { registerBotCommands } from './commands/bot_cmd.js';
 import { registerKeysCommands } from './commands/keys_cmd.js';
 import { registerModelCommands } from './commands/model_cmd.js';
 import { isFirstRun, runSetupWizard } from './setup_wizard.js';
+import { runUpdate } from './updater.js';
 
 function loadEnvFile(): void {
   const envPath = path.join(process.env.HOME || '~', '.cyplex', '.env');
@@ -62,6 +63,13 @@ async function main(): Promise<void> {
       await runSetupWizard();
     });
 
+  // Update command
+  program.command('update')
+    .description('Fetch latest updates from GitHub, rebuild, and restart')
+    .action(async () => {
+      await runUpdate();
+    });
+
   registerDaemonCommands(program);
   registerAgentCommands(program);
   registerTaskCommands(program);
@@ -95,10 +103,22 @@ async function launchRepl(): Promise<void> {
         rl.close();
         return;
       }
-      if (trimmed === 'help') {
+      if (trimmed === 'help' || trimmed === '/help') {
         console.log('Commands: daemon, agent, task, session, skill, config, audit, bot, keys, model');
-        console.log('Type "exit" to quit');
-      } else if (trimmed.startsWith('\\status')) {
+        console.log('');
+        console.log('  /update    — Fetch latest updates from GitHub, rebuild, and restart');
+        console.log('  /setup     — Re-run the setup wizard');
+        console.log('  /status    — Query daemon status');
+        console.log('  exit       — Quit the REPL');
+      } else if (trimmed === '/update') {
+        rl.close();
+        await runUpdate();
+        return;
+      } else if (trimmed === '/setup') {
+        rl.close();
+        await runSetupWizard();
+        return;
+      } else if (trimmed === '/status' || trimmed.startsWith('\\status')) {
         console.log('Querying daemon status...');
       } else if (trimmed.length > 0) {
         console.log(`Submitting to Agentic: "${trimmed}"`);
