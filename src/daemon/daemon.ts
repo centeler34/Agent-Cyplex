@@ -13,13 +13,20 @@ import { acquireLock, releaseLock, isLocked } from './lock.js';
 import type { AgentConfig, AgentRole } from '../types/agent_config.js';
 import type { TaskEnvelope, ResultEnvelope } from '../types/task_envelope.js';
 
+const logDir = path.join(process.env.HOME || '~', '.cyplex', 'logs');
+const logTransports: any[] = [
+  new transports.File({ filename: path.join(logDir, 'daemon.log') }),
+];
+
+// Only add console transport if running in foreground (TTY attached)
+if (process.stdout.isTTY) {
+  logTransports.push(new transports.Console({ format: format.combine(format.colorize(), format.simple()) }));
+}
+
 const logger = createLogger({
   level: process.env.CYPLEX_LOG_LEVEL || 'info',
   format: format.combine(format.timestamp(), format.json()),
-  transports: [
-    new transports.File({ filename: path.join(process.env.HOME || '~', '.cyplex', 'logs', 'daemon.log') }),
-    new transports.Console({ format: format.combine(format.colorize(), format.simple()) }),
-  ],
+  transports: logTransports,
 });
 
 export interface DaemonConfig {
