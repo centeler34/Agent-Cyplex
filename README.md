@@ -151,6 +151,23 @@ Agent Cyplex implements defense-in-depth security across multiple layers, all bu
 
 ---
 
+### Security Fixes — SSH Tunnel Removal
+
+The `go/ssh-tunnel` module was removed entirely after a security review identified **9 vulnerabilities**, including:
+
+- **Critical:** SSH host key verification disabled (`ssh.InsecureIgnoreHostKey()`), enabling Man-in-the-Middle attacks
+- **High:** Race conditions in tunnel reconnection logic (no mutex protection on shared state)
+- **High:** Missing SSH private key file permission checks (keys could be world-readable)
+- **High:** Double-close race on bidirectional connection forwarding
+- **Medium:** No input validation on host/port configuration fields
+- **Medium:** Hardcoded SSH port 22 with no configurability
+- **Medium:** Config file permissions not verified before loading
+- **Low:** Information disclosure in error logging, insufficient keepalive validation
+
+The SSH tunnel was originally used for proxying to local LLM backends (Ollama, LM Studio), which have also been removed. The `golang.org/x/crypto` dependency was eliminated along with it. Rather than patching 9 separate issues, the entire module was deleted as it no longer served a purpose.
+
+---
+
 ## Supported AI Providers
 
 | Provider | Type | Models | Cost |
@@ -209,7 +226,6 @@ cargo build --release
 
 # Build Go utilities
 mkdir -p dist
-cd go/ssh-tunnel && go build -o ../../dist/ssh-tunnel . && cd ../..
 cd go/net-probe && go build -o ../../dist/net-probe . && cd ../..
 
 # Install Python dependencies
@@ -427,7 +443,6 @@ Agent-cyplex/
 |   +-- cyplex-crypto/      Cryptographic utilities
 +-- go/                     Go utilities
 |   +-- net-probe/          Network reconnaissance tools
-|   +-- ssh-tunnel/         SSH tunnel management
 +-- python/                 Python microservices
 |   +-- forensics-service/  Digital forensics analysis
 |   +-- osint-utils/        OSINT data gathering
