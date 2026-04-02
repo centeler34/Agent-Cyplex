@@ -1,3 +1,83 @@
+# Agent v0 — Release v1.2.2
+
+**Release Date:** 2026-04-02
+
+---
+
+## What's New
+
+Agent v0 v1.2.2 is a security-focused release that resolves all 22 vulnerabilities identified during a comprehensive security review. This completes the full security hardening pass started in v1.0.0.
+
+---
+
+## Security Vulnerabilities Patched (22 total)
+
+### Critical (2)
+
+| # | Vulnerability | File | Fix |
+|---|--------------|------|-----|
+| 1 | Unencrypted task results stored in SQLite | `task_registry.ts` | Added AES-256-GCM column-level encryption for all task data |
+| 2 | encrypt() allowed calls without master key | `task_registry.ts` | Throws if `setMasterKey()` not called before encryption |
+
+### High (7)
+
+| # | Vulnerability | File | Fix |
+|---|--------------|------|-----|
+| 3 | No validation on encrypted data format before decrypt | `task_registry.ts` | Added regex validation (`isEncrypted()`) before decryption |
+| 4 | Error objects leaked internal paths and stack traces | `updater.ts` | Replaced `${e}` with generic error messages in all catch blocks |
+| 5 | Path traversal on session scope file loading | `session_manager.ts` | Added `startsWith(cwd)` guard on resolved scope paths |
+| 6 | No rate limiting on auth/task submission | `server.ts` (both) | 5 attempts/minute per-socket rate limiter on auth events |
+| 7 | Prototype pollution via keystore `get()` | `keystore_bridge.ts` | Added `SAFE_KEY_NAME` regex + `hasOwnProperty` guard |
+| 8 | SSRF via unchecked URL schemes in skill download | `skill_intake.ts` | Added `validateUrl()` blocking non-HTTP schemes and localhost |
+| 9 | Command injection via `$EDITOR` env var | `config_cmd.ts` | Restricted editor regex to `[a-zA-Z0-9_-]+` (no paths) |
+| 10 | Shell injection in native file picker | `skill_intake.ts` | Replaced `execSync` with `execFileSync` (no shell invoked) |
+
+### Medium (8)
+
+| # | Vulnerability | File | Fix |
+|---|--------------|------|-----|
+| 11 | CORS allowed all origins | `server.ts` (both) | Explicit whitelist: `localhost:3000` and `127.0.0.1:3000` only |
+| 12 | No Socket.IO authentication middleware | `server.ts` (both) | `authenticatedSockets` Set tracks auth state per connection |
+| 13 | Unvalidated Socket.IO payloads | `server.ts` (both) | Type + shape validation on `auth` and `submit_task` events |
+| 14 | `Math.random()` used for session IDs | `session_manager.ts` | Replaced with `crypto.randomUUID()` |
+| 15 | Weak scrypt KDF parameters (N=16384) | `keystore_bridge.ts` | Strengthened to N=65536, r=8, p=1 |
+| 16 | Unvalidated `HOME` env var used in paths | `daemon_cmd.ts`, `updater.ts`, `skill_intake.ts` | Validate with `os.homedir()` fallback |
+| 17 | TOCTOU race in quarantine file writes | `skill_intake.ts` | Atomic file creation with `O_CREAT\|O_EXCL` (`'wx'` flag) |
+| 18 | XSS via `innerText` in web dashboards | `index.html` (both) | Changed to `textContent` |
+
+### Low (5)
+
+| # | Vulnerability | File | Fix |
+|---|--------------|------|-----|
+| 19 | Missing .gitignore entries for secrets | `.gitignore` | Added `*.pem`, `*.key`, `*.crt`, `certs/`, `.env.*`, `config/config.yaml` |
+| 20 | Destructive `git reset --hard` in updater | `updater.ts` | Safe abort with user instructions instead of data loss |
+| 21 | Express fingerprinting headers exposed | `server.ts` (both) | Disabled `x-powered-by` and `etag` headers |
+| 22 | Weak session name regex | `session_manager.ts` | Tightened to alphanumeric + hyphens only |
+
+---
+
+## Additional Fixes
+
+- Fixed `daemon_main.ts` — renamed `CyplexDaemon` to `AgentV0Daemon` and updated stale socket/PID paths
+- Fixed import paths in `migrate_db.ts` (was pointing to wrong directory)
+- Removed unused `crypto` imports across multiple files
+- HTTP servers migrated to HTTPS with auto-generated self-signed TLS certificates
+- Added 10 MB message size limit on daemon IPC responses
+- Added 1 MB limit on Express JSON body parsing
+
+---
+
+## Upgrade Notes
+
+- TLS certificates are auto-generated on first server start in `~/.agent-v0/certs/`
+- The web dashboard now requires HTTPS — update bookmarks to `https://localhost:3000`
+- Auth is now rate-limited: 5 failed attempts per minute before lockout
+- Session names must match `[a-zA-Z0-9-]` pattern (no special characters)
+
+---
+
+---
+
 # Agent v0 — Release v1.0.0
 
 **Release Date:** 2026-04-01
