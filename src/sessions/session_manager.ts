@@ -4,6 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { ScopeEnforcer, type EngagementScope } from './scope_enforcer.js';
 
@@ -27,8 +28,20 @@ export class SessionManager {
   }
 
   create(name: string, scopeFile?: string): Session {
-    const id = `session-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    // Validate session name to prevent path traversal (CWE-23)
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) {
+      throw new Error(`Invalid session name: "${name}". Use only alphanumeric, hyphens, underscores, and dots.`);
+    }
+
+    const id = `session-${crypto.randomUUID()}`;
     const workspaceRoot = path.join(this.workspaceBase, name);
+
+    // Verify resolved path stays within workspace base
+    const resolvedRoot = path.resolve(workspaceRoot);
+    const resolvedBase = path.resolve(this.workspaceBase);
+    if (!resolvedRoot.startsWith(resolvedBase + path.sep)) {
+      throw new Error(`Path traversal blocked: session name "${name}" resolves outside workspace`);
+    }
 
     // Create workspace directories
     fs.mkdirSync(workspaceRoot, { recursive: true });
@@ -38,9 +51,16 @@ export class SessionManager {
     }
 
     let scope: EngagementScope | undefined;
-    if (scopeFile && fs.existsSync(scopeFile)) {
-      const scopeYaml = fs.readFileSync(scopeFile, 'utf-8');
-      scope = parseYaml(scopeYaml) as EngagementScope;
+    if (scopeFile) {
+      const resolvedScope = path.resolve(scopeFile);
+      const cwd = path.resolve(process.cwd());
+      if (!resolvedScope.startsWith(cwd + path.sep) && resolvedScope !== cwd) {
+        throw new Error(`Scope file must be within the current directory: ${scopeFile}`);
+      }
+      if (fs.existsSync(resolvedScope)) {
+        const scopeYaml = fs.readFileSync(resolvedScope, 'utf-8');
+        scope = parseYaml(scopeYaml) as EngagementScope;
+      }
     }
 
     const session: Session = {

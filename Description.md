@@ -1,6 +1,6 @@
 # Agent v0 — Product Specification
 
-> A multi-agent AI orchestration CLI terminal for security researchers, developers, and power users.
+> A universal multi-agent AI orchestration CLI terminal designed to empower any workflow through coordinated AI intelligence.
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 1. Project Overview
 
-Agent v0 is a multi-agent AI orchestration CLI terminal tool designed for security researchers, developers, and power users who need coordinated AI assistance across complex, parallelizable workflows.
+Agent v0 is a versatile multi-agent AI orchestration CLI terminal. While originally built for security research, it is designed as a universal framework for anyone who needs coordinated AI assistance across complex, parallelizable workflows—from creative writing and software development to data analysis and personal automation.
 
 Rather than a single AI answering queries sequentially, Agent v0 deploys a fleet of specialized agents under a top-level orchestrator called **Agentic**. Agentic receives the user's intent, decomposes it into discrete subtasks, and dispatches those tasks concurrently to subordinate agents — each running in its own isolated sandbox, with its own AI model backend, permissions, and designated workspace directory.
 
@@ -147,7 +147,7 @@ cyplex daemon logs     # Tail daemon logs
 The daemon provides:
 
 - A Unix socket (`/tmp/cyplex.sock`) for CLI client attachment
-- A PID file and lock preventing duplicate instances
+- A PID file (`/tmp/agent-v0.pid`) and lock preventing duplicate instances
 - A heartbeat loop confirming all registered agents are responsive
 - Session persistence: tasks survive CLI disconnection; reattach with `cyplex session attach`
 - Graceful shutdown with `--drain` flag to wait for in-flight tasks before exit
@@ -522,7 +522,7 @@ All secrets (AI provider API keys, OSINT platform tokens, bot tokens) are stored
 - **Least privilege**: Each agent receives only the keys it needs — the Code Agent has no access to bot tokens; the Recon Agent has no access to the Code Agent's execution sandbox
 - **Rotation**: `cyplex keys rotate --provider anthropic` re-encrypts and logs the rotation event to the audit log
 - **Session scoping**: Keys can be scoped to a specific session, automatically invalidating when the session closes
-
+The `TaskRegistry` now stores all API keys in an encrypted SQLite database, using a key derived from the master password.
 ### 6.3 Permission System
 
 Permissions are defined per-agent in `config.yaml` and enforced by the central **Permission Manager** on every operation. Permission categories:
@@ -586,7 +586,7 @@ Each entry:
 
 | Channel | Authentication |
 |---|---|
-| CLI | Session token from `~/.cyplex/session.token`, created at daemon start, scoped to running user, TTL configurable (default 24h) |
+| CLI | Session token from `~/.agent-v0/session.token`, created at daemon start, scoped to running user, TTL configurable (default 24h) |
 | Telegram | Platform HMAC-SHA256 on the bot secret token verified before message processing |
 | Discord | Ed25519 signature verification on every interaction webhook |
 | WhatsApp (Cloud API) | Meta HMAC-SHA256 webhook signature verification |
@@ -901,7 +901,6 @@ Node.js with TypeScript is the recommended runtime. Strong async I/O for concurr
 | Schema validation | `zod` |
 | Concurrent task queue | `p-queue` |
 | AI providers (cloud) | `@anthropic-ai/sdk`, `openai`, `@google/generative-ai` |
-| SSH tunneling | `ssh2` npm package — programmatic SSH client for tunnel management |
 
 ### 8.2 Bot Libraries
 
@@ -946,12 +945,12 @@ interface ModelClient {
 ### 9.1 Main Config (`~/.cyplex/config.yaml`)
 
 ```yaml
-cyplex:
+agent-v0:
   version: "1.0"
 
   daemon:
-    socket_path: "/tmp/cyplex.sock"
-    pid_file: "/tmp/cyplex.pid"
+    socket_path: "/tmp/agent-v0.sock"
+    pid_file: "/tmp/agent-v0.pid"
     heartbeat_interval_ms: 5000
     log_level: "info"
     log_path: "~/.cyplex/logs/"
@@ -1131,6 +1130,7 @@ Agents **refuse to act on out-of-scope targets** — the scope file is loaded at
 - [ ] Linux namespace + seccomp sandboxing via bubblewrap
 - [ ] Hash-chained audit log with `cyplex audit verify`
 - [ ] Full permission system with Permission Manager
+- [ ] **Universal Fleet**: Dynamic agent role discovery from configuration
 - [ ] Telegram and Discord bot integrations with allowlists
 - [ ] CyplexHub v1: curated set of 20 skills, signature verification
 - [ ] Live TUI dashboard (`cyplex status --watch`)
@@ -1146,10 +1146,11 @@ Agents **refuse to act on out-of-scope targets** — the scope file is loaded at
 
 - [ ] Multi-user daemon with per-user session isolation
 - [ ] Team-shared sessions with role-based access (viewer / operator / admin)
+- [ ] **Agent Marketplace**: Community-driven marketplace for pre-configured agent roles
 - [ ] WhatsApp integration (Baileys or Meta Cloud API)
 - [ ] Optional read-only web UI for sharing findings with clients
 - [ ] Dynamic agent spawning: Agentic can request additional parallel instances
-- [ ] Agent self-improvement: agents can propose new skill YAML files from recurring patterns
+- [ ] **Self-Evolution**: Agents can propose and scaffold new agent roles based on observed task patterns
 - [ ] Plugin API: third-party agents can register with the daemon
 - [ ] CyplexHub community submissions with signed review pipeline
 - [ ] Integration with DefectDojo, JIRA, and GitHub Issues for automated finding ticketing
@@ -1166,7 +1167,7 @@ The Agent Cyplex repository is organized as a **monorepo** with language-specifi
 | **Rust** | Sandbox enforcer, keystore engine, audit logger, IPC core, crypto primitives | Memory safety, no garbage-collector pauses, zero-cost abstractions — the right language for security-critical and performance-critical paths |
 | **TypeScript (Node.js)** | Daemon orchestration, gateway router, CLI client, TUI, bot adapters, skill loader | First-class async/streaming, rich npm ecosystem for AI SDKs and bot libraries |
 | **Python** | Forensics microservice, PCAP/YARA analysis, Volatility integration, data science utilities | Best ecosystem for security analysis tooling |
-| **Go** | SSH tunnel manager, network utilities, bubblewrap wrapper, health-check probe | Fast compile, single static binary, excellent networking primitives |
+| **Go** | Network utilities, bubblewrap wrapper, health-check probe | Fast compile, single static binary, excellent networking primitives |
 | **YAML** | Skill definitions, configuration schemas, engagement scope files | Human-readable declarative config |
 | **TOML** | Rust crate manifests (`Cargo.toml`) | Rust ecosystem standard |
 | **Shell (Bash)** | Install scripts, CI helpers, dev tooling | Glue and bootstrapping |
@@ -1340,14 +1341,7 @@ agent-cyplex/
 │       ├── provider_config.ts          # Gateway provider configuration types
 │       └── skill_schema.ts             # Skill YAML schema types (Zod)
 │
-├── go/                                 # Go binaries (network utilities, SSH tunnel manager)
-│   │
-│   ├── ssh-tunnel/
-│   │   ├── main.go                     # SSH tunnel manager entry point
-│   │   ├── tunnel.go                   # SSH port-forward lifecycle (connect, keepalive, reconnect)
-│   │   ├── key_loader.go               # Ed25519/RSA key loading for passwordless auth
-│   │   ├── health.go                   # Tunnel health probe: check if local port is reachable
-│   │   └── config.go                   # Tunnel config parsing (JSON from daemon)
+├── go/                                 # Go binaries (network utilities)
 │   │
 │   └── net-probe/
 │       ├── main.go                     # Network connectivity probe (used by Monitor Agent)
@@ -1415,7 +1409,6 @@ agent-cyplex/
 │   ├── install.sh                      # One-line installer (detects OS, installs deps)
 │   ├── build-rust.sh                   # Compile all Rust crates (release mode)
 │   ├── build-go.sh                     # Compile Go binaries
-│   ├── setup-ssh-keys.sh               # Generate and deploy SSH keys for remote AI tunnels
 │   └── dev-setup.sh                    # Full local dev environment bootstrap
 │
 └── tests/
@@ -1447,7 +1440,7 @@ agent-cyplex/
 | **Rust** | 30 files | Sandbox, keystore, audit log, IPC core, permissions, crypto, YARA scanner — all security-critical paths |
 | **TypeScript** | 50 files | Daemon, orchestrator, gateway, agents, skills, skill intake/quarantine/scanning, bots, CLI, TUI |
 | **Python** | 10 files | Forensics microservice, OSINT utilities, analysis tools |
-| **Go** | 8 files | SSH tunnel manager, network probe binary |
+| **Go** | 3 files | Network probe binary |
 | **YAML** | 20 files | Skill definitions, config schemas, scope file templates |
 | **Shell** | 5 files | Install scripts, build helpers, dev setup |
 | **TOML / JSON / other** | 5 files | Cargo.toml manifests, package.json, go.mod |

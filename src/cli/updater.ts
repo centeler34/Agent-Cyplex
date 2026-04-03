@@ -7,6 +7,8 @@ import { execSync, spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 
+import crypto from 'node:crypto'; // Added for crypto.randomUUID()
+import os from 'node:os';
 const CYAN = '\x1b[36m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
@@ -45,14 +47,39 @@ function getInstallDir(): string {
   const scriptDir = path.dirname(new URL(import.meta.url).pathname);
   const repoRoot = path.resolve(scriptDir, '..', '..');
   // Also check the standard install location
-  const homeInstall = path.join(process.env.HOME || '~', '.agent-v0');
+  const homeInstall = path.join(os.homedir(), '.agent-v0');
   if (fs.existsSync(path.join(repoRoot, 'package.json'))) return repoRoot;
   if (fs.existsSync(path.join(homeInstall, 'package.json'))) return homeInstall;
   return repoRoot;
 }
 
+/**
+ * Cleans up empty or outdated artifact files to prevent deployment issues.
+ */
+function preUpdateCleanup(installDir: string): void {
+  const artifactPaths = [
+    path.join(installDir, 'dist'),
+    path.join(installDir, 'go/net-probe/net-probe'),
+  ];
+
+  for (const target of artifactPaths) {
+    if (!fs.existsSync(target)) continue;
+    const items = fs.statSync(target).isDirectory() ? fs.readdirSync(target) : [target];
+    
+    for (const item of items) {
+      const fpath = fs.statSync(target).isDirectory() ? path.join(target, item) : item;
+      if (fs.existsSync(fpath) && fs.statSync(fpath).isFile() && fs.statSync(fpath).size === 0) {
+        fs.unlinkSync(fpath);
+      }
+    }
+  }
+}
+
 export async function runUpdate(): Promise<void> {
   const installDir = getInstallDir();
+
+  // Run cleanup before starting update process
+  preUpdateCleanup(installDir);
 
   console.log('');
   console.log(`${CYAN}${'─'.repeat(60)}${NC}`);
@@ -124,15 +151,10 @@ export async function runUpdate(): Promise<void> {
     run('git pull origin main --ff-only', installDir);
     success('Code updated');
   } catch {
-    // If fast-forward fails, try a reset
-    warn('Fast-forward merge failed, resetting to remote...');
-    try {
-      run('git reset --hard origin/main', installDir);
-      success('Code updated (reset to remote)');
-    } catch (e) {
-      error(`Failed to update code: ${e}`);
-      return;
-    }
+    warn('Fast-forward merge failed. Local changes may conflict with upstream.');
+    warn('Please resolve conflicts manually or run: git stash && git pull origin main');
+    error('Automatic update aborted to protect local changes.');
+    return;
   }
 
   const newHash = run('git rev-parse --short HEAD', installDir);
@@ -149,16 +171,16 @@ export async function runUpdate(): Promise<void> {
   try {
     run('npm install', installDir);
     success('  Dependencies installed');
-  } catch (e) {
-    error(`  npm install failed: ${e}`);
+  } catch {
+    error('  npm install failed. Check logs for details.');
   }
 
   info('  Compiling TypeScript...');
   try {
     run('npx tsc', installDir);
     success('  TypeScript compiled');
-  } catch (e) {
-    error(`  TypeScript build failed: ${e}`);
+  } catch {
+    error('  TypeScript build failed. Check logs for details.');
   }
 
   // Rust (if cargo is available)
@@ -167,8 +189,8 @@ export async function runUpdate(): Promise<void> {
     try {
       run('cargo build --release', installDir);
       success('  Rust crates built');
-    } catch (e) {
-      warn(`  Rust build skipped: ${e}`);
+    } catch {
+      warn('  Rust build skipped (build failed).');
     }
   }
 
@@ -176,12 +198,12 @@ export async function runUpdate(): Promise<void> {
   if (hasCommand('go')) {
     info('  Building Go utilities...');
     try {
-      const distDir = path.join(installDir, 'dist');
-      if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
-      run('go build -o ../../dist/net-probe .', path.join(installDir, 'go', 'net-probe'));
+      const goDistDir = path.join(installDir, 'dist', 'go');
+      if (!fs.existsSync(goDistDir)) fs.mkdirSync(goDistDir, { recursive: true });
+      run('go build -o ../../dist/go/net-probe .', path.join(installDir, 'go', 'net-probe'));
       success('  Go utilities built');
-    } catch (e) {
-      warn(`  Go build skipped: ${e}`);
+    } catch {
+      warn('  Go build skipped (build failed).');
     }
   }
 
@@ -198,12 +220,12 @@ export async function runUpdate(): Promise<void> {
   }
 
   console.log('');
-  success(`${BOLD}Update complete!${NC}`);
+  success(`${BOLD}Update complete! Agent v0 is ready.${NC}`);
   console.log('');
-
+  
   // ── Step 4: Restart ────────────────────────────────────────────────────
 
-  info('Restarting Agent Cyplex...');
+  info('Restarting Agent v0...');
   console.log('');
 
   // Spawn a new process and exit the current one
@@ -221,8 +243,12 @@ export async function runUpdate(): Promise<void> {
 }
 
 function hasCommand(cmd: string): boolean {
+  // Validate command name to prevent command injection (CWE-78)
+  if (!/^[a-zA-Z0-9_-]+$/.test(cmd)) {
+    return false;
+  }
   try {
-    execSync(`which ${cmd}`, { stdio: 'pipe' });
+    execSync(`command -v -- ${cmd}`, { stdio: 'pipe', shell: '/bin/sh' });
     return true;
   } catch {
     return false;

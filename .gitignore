@@ -9,6 +9,15 @@ __pycache__/
 # Environment & secrets
 *.enc
 keystore.enc
+.npmrc
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+certs/
+config/config.yaml
 
 # Build artifacts
 *.o

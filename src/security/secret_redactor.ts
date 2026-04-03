@@ -1,12 +1,14 @@
 /**
  * Strip secrets from any object before logging.
  */
+import crypto from 'node:crypto'; // Added for crypto.randomUUID()
 
 const SECRET_KEY_PATTERNS = [
   /key/i,
   /token/i,
   /secret/i,
   /password/i,
+  /pass(phrase|wd)?/i,
   /credential/i,
   /auth/i,
   /bearer/i,
@@ -45,6 +47,7 @@ function looksLikeSecret(value: string): boolean {
   // Detect common API key / token patterns
   if (value.startsWith('sk-') && value.length > 20) return true;
   if (value.startsWith('sk-ant-') && value.length > 20) return true;
+  if (value.startsWith('AIza') && value.length > 30) return true;
   if (value.startsWith('xoxb-') || value.startsWith('xoxp-')) return true;
   if (/^[A-Za-z0-9]{32,}$/.test(value)) return true;
   return false;
