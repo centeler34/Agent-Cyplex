@@ -150,7 +150,7 @@ function printHelp(): void {
   const cmds: [string, string][] = [
     ['/help',      'Show this help screen'],
     ['/setup',     'Re-run the setup wizard'],
-    ['/update',    'Fetch latest from GitHub & rebuild'],
+    ['/update',    'Download latest release from GitHub & rebuild'],
     ['/uninstall', 'Remove Agent v0 completely'],
     ['/status',    'Query daemon health & status'],
     ['/clear',     'Clear session context'],
@@ -370,7 +370,7 @@ async function main(): Promise<void> {
     .action(async () => { await runSetupWizard(); });
 
   program.command('update')
-    .description('Fetch latest updates from GitHub, rebuild, and restart')
+    .description('Download the latest release from GitHub, install, rebuild, and restart')
     .action(async () => { await runUpdate(); });
 
   program.command('uninstall')
