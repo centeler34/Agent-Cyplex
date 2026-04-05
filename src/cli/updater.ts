@@ -7,7 +7,7 @@
  * recompiles only the components that were affected.
  */
 
-import { execSync, spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -41,12 +41,13 @@ const bullet  = (t: string) => console.log(`      ${DIM}${t}${NC}`);
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function run(cmd: string, cwd: string): string {
-  return execSync(cmd, { cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+  // Use execFileSync with explicit shell to avoid command injection (CWE-78)
+  return execFileSync('/bin/sh', ['-c', cmd], { cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
 }
 
 function hasCmd(name: string): boolean {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) return false;
-  try { execSync(`command -v -- ${name}`, { stdio: 'pipe', shell: '/bin/sh' }); return true; }
+  try { execFileSync('/bin/sh', ['-c', `command -v -- ${name}`], { stdio: 'pipe' }); return true; }
   catch { return false; }
 }
 

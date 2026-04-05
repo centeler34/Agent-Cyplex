@@ -5,7 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import readline from 'node:readline';
 
 const CYAN = '\x1b[36m';
@@ -116,7 +116,7 @@ export async function runUninstall(): Promise<void> {
         // Might need sudo for /usr/local/bin
         if (binPath === SYSTEM_BIN) {
           try {
-            execSync(`sudo rm -f "${binPath}"`, { stdio: 'pipe' });
+            execFileSync('sudo', ['rm', '-f', binPath], { stdio: 'pipe' });
           } catch {
             fs.unlinkSync(binPath);
           }
@@ -144,7 +144,7 @@ export async function runUninstall(): Promise<void> {
 
   // npm unlink if applicable
   try {
-    execSync('npm unlink -g agent-v0 2>/dev/null', { stdio: 'pipe' });
+    execFileSync('npm', ['unlink', '-g', 'agent-v0'], { stdio: 'pipe' });
     removed('Removed npm global link');
   } catch { /* not linked */ }
 

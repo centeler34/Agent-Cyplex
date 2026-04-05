@@ -1,5 +1,6 @@
 """YARA rule scanning against file artifacts."""
 
+import os
 from typing import Any
 
 
@@ -12,6 +13,13 @@ def scan_with_yara(file_path: str = "", rules_path: str = "", **kwargs: Any) -> 
 
     if not file_path:
         return {"error": "file_path is required"}
+    # Block path traversal (CWE-23)
+    if ".." in file_path:
+        return {"error": f"Path traversal blocked: {file_path}"}
+    if not os.path.isfile(os.path.realpath(file_path)):
+        return {"error": f"File not found: {file_path}"}
+    if rules_path and ".." in rules_path:
+        return {"error": f"Path traversal blocked in rules_path: {rules_path}"}
 
     matches: list[dict] = []
 

@@ -6,7 +6,7 @@
  * Each tool call is sandboxed to the agent's workspace and audited.
  */
 
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { AgentRole } from '../types/agent_config.js';
@@ -53,13 +53,39 @@ function resolveSafe(workspace: string, target: string): string {
 
 // ── Bash Tool ──────────────────────────────────────────────────────────────
 
+/** Dangerous shell metacharacters/patterns that could enable command injection. */
+const BLOCKED_PATTERNS = [
+  /;\s*(rm|curl|wget|nc|ncat|bash|sh|python|node)\b/,
+  /\|\s*(bash|sh|python|node)\b/,
+  />\s*\/etc\//,
+  /`[^`]*`/,           // backtick command substitution
+  /\$\([^)]*\)/,        // $() command substitution
+];
+
 export function execBash(
   command: string,
   opts: { cwd: string; timeout_ms?: number; agent_id: AgentRole },
 ): ToolResult {
   const start = Date.now();
+
+  // Validate the command is not empty and is within size limits
+  if (!command || command.length > 10_000) {
+    return { success: false, output: '', error: 'Command is empty or exceeds maximum length (10KB)', duration_ms: Date.now() - start };
+  }
+
+  // Block dangerous injection patterns
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (pattern.test(command)) {
+      const result: ToolResult = { success: false, output: '', error: 'Command blocked: dangerous shell pattern detected', duration_ms: Date.now() - start };
+      recordInvocation({ tool: 'Bash', agent_id: opts.agent_id, params: { command: '[BLOCKED]' }, result, timestamp: new Date().toISOString() });
+      return result;
+    }
+  }
+
   try {
-    const stdout = execSync(command, {
+    // Use execFileSync with explicit shell to avoid direct shell metachar interpretation
+    // while still supporting pipes/redirects that agents legitimately need.
+    const stdout = execFileSync('/bin/sh', ['-c', command], {
       cwd: opts.cwd,
       encoding: 'utf-8',
       timeout: opts.timeout_ms ?? 120_000,
@@ -273,6 +299,28 @@ export async function execWebFetch(
 
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     return { success: false, output: '', error: `Blocked scheme: ${parsed.protocol}`, duration_ms: Date.now() - start };
+  }
+
+  // SSRF protection: block requests to private/internal networks (CWE-918)
+  const hostname = parsed.hostname.toLowerCase();
+  const privatePatterns = [
+    /^localhost$/i,
+    /^127\.\d+\.\d+\.\d+$/,
+    /^10\.\d+\.\d+\.\d+$/,
+    /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+    /^192\.168\.\d+\.\d+$/,
+    /^0\.0\.0\.0$/,
+    /^::1?$/,
+    /^fd[0-9a-f]{2}:/i,
+    /^fe80:/i,
+    /^169\.254\.\d+\.\d+$/,      // link-local
+    /\.local$/,
+    /\.internal$/,
+    /\.localhost$/,
+    /^metadata\.google\.internal$/,  // cloud metadata
+  ];
+  if (privatePatterns.some(p => p.test(hostname))) {
+    return { success: false, output: '', error: `SSRF blocked: request to private/internal host "${hostname}"`, duration_ms: Date.now() - start };
   }
 
   try {

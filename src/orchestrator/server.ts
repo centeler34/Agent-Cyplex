@@ -8,7 +8,7 @@ import { Server } from 'socket.io';
 import path from 'node:path';
 import net from 'node:net';
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { TaskRegistry } from './task_registry.js';
 import { KeystoreBridge } from '../security/keystore_bridge.js';
@@ -26,10 +26,11 @@ const certPath = path.join(certDir, 'server.crt');
 if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
   console.log('  TLS certificates not found. Generating self-signed cert...');
   fs.mkdirSync(certDir, { recursive: true });
-  execSync(
-    `openssl req -x509 -newkey rsa:2048 -nodes -out "${certPath}" -keyout "${keyPath}" -days 365 -subj "/CN=localhost"`,
-    { stdio: 'pipe' },
-  );
+  execFileSync('openssl', [
+    'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
+    '-out', certPath, '-keyout', keyPath,
+    '-days', '365', '-subj', '/CN=localhost',
+  ], { stdio: 'pipe' });
   console.log('  Self-signed certificate generated.');
 }
 
@@ -50,7 +51,19 @@ const SOCKET_PATH = '/tmp/agent-v0.sock';
 
 const scriptDir = path.dirname(new URL(import.meta.url).pathname);
 app.use(express.static(path.resolve(scriptDir, '..', 'web', 'public')));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10kb' }));
+
+// ── Security Headers ─────────────────────────────────────────────────────
+app.use((_req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://localhost:* ws://localhost:*; img-src 'self' data:; frame-ancestors 'none'");
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 let registry: TaskRegistry | null = null;
 

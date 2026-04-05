@@ -1,5 +1,6 @@
 """Volatility3 memory analysis wrapper."""
 
+import os
 from typing import Any
 
 
@@ -18,6 +19,9 @@ def analyze_memory_dump(file_path: str = "", plugin: str = "pslist", **kwargs: A
 
     if not file_path:
         return {"error": "file_path is required"}
+    # Block path traversal (CWE-23)
+    if ".." in file_path:
+        return {"error": f"Path traversal blocked: {file_path}"}
 
     # Volatility3 integration is complex; this provides the interface
     # In practice, agents may pass pre-processed Volatility output

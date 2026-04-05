@@ -1,8 +1,13 @@
 """crt.sh certificate transparency scraper."""
 
 import json
+import re
 import urllib.request
+import urllib.parse
 from typing import Any
+
+# Valid domain name pattern (CWE-918 SSRF mitigation)
+_DOMAIN_RE = re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")
 
 
 def search_crtsh(domain: str = "", **kwargs: Any) -> dict:
@@ -10,7 +15,12 @@ def search_crtsh(domain: str = "", **kwargs: Any) -> dict:
     if not domain:
         return {"error": "domain is required"}
 
-    url = f"https://crt.sh/?q=%.{domain}&output=json"
+    # Validate domain format to prevent SSRF/injection (CWE-918)
+    if not _DOMAIN_RE.match(domain):
+        return {"error": f"Invalid domain format: {domain}"}
+
+    safe_domain = urllib.parse.quote(domain, safe="")
+    url = f"https://crt.sh/?q=%.{safe_domain}&output=json"
 
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "AgentCyplex-OSINT/0.1"})

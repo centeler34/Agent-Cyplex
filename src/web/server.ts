@@ -25,6 +25,18 @@ app.disable('etag');
 app.set('trust proxy', false);
 app.use(express.json({ limit: '10kb' })); // Mitigate DOS via large payloads
 
+// ── Security Headers ─────────────────────────────────────────────────────
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://localhost:* ws://localhost:*; img-src 'self' data:; frame-ancestors 'none'");
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 // ── TLS Setup ─────────────────────────────────────────────────────────────
 
 const certDir = path.join(os.homedir(), '.agent-v0', 'certs');

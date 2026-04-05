@@ -1,15 +1,22 @@
 """HaveIBeenPwned and breach database queries."""
 
 import json
+import re
 import urllib.request
 import urllib.parse
 from typing import Any
+
+# Basic email format validation (CWE-918 SSRF mitigation)
+_EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
 
 
 def lookup_email(email: str = "", api_key: str = "", **kwargs: Any) -> dict:
     """Check if an email appears in known data breaches via HIBP API."""
     if not email:
         return {"error": "email is required"}
+
+    if not _EMAIL_RE.match(email) or len(email) > 254:
+        return {"error": f"Invalid email format: {email}"}
 
     if not api_key:
         return {
