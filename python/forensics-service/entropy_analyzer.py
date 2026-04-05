@@ -1,6 +1,7 @@
 """File entropy calculation for packing/encryption detection."""
 
 import math
+import os
 from collections import Counter
 from typing import Any
 
@@ -9,6 +10,11 @@ def calculate_entropy(file_path: str = "", block_size: int = 256, **kwargs: Any)
     """Calculate Shannon entropy of a file, overall and per-block."""
     if not file_path:
         return {"error": "file_path is required"}
+    # Block path traversal (CWE-23)
+    if ".." in file_path:
+        return {"error": f"Path traversal blocked: {file_path}"}
+    if not os.path.isfile(os.path.realpath(file_path)):
+        return {"error": f"File not found: {file_path}"}
 
     with open(file_path, "rb") as f:
         data = f.read()

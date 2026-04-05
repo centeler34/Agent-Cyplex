@@ -1,5 +1,6 @@
 """PE file static analysis."""
 
+import os
 from typing import Any
 
 
@@ -12,6 +13,11 @@ def analyze_pe(file_path: str = "", **kwargs: Any) -> dict:
 
     if not file_path:
         return {"error": "file_path is required"}
+    # Block path traversal (CWE-23)
+    if ".." in file_path:
+        return {"error": f"Path traversal blocked: {file_path}"}
+    if not os.path.isfile(os.path.realpath(file_path)):
+        return {"error": f"File not found: {file_path}"}
 
     pe = pefile.PE(file_path)
 

@@ -96,7 +96,7 @@ export class KeystoreBridge {
     if (!this.data) throw new Error('Keystore not open');
     const dir = path.substring(0, path.lastIndexOf('/'));
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path, JSON.stringify(this.data, null, 2), 'utf-8');
+    fs.writeFileSync(path, JSON.stringify(this.data, null, 2), { encoding: 'utf-8', mode: 0o600 });
   }
 
   private deriveKey(password: string, salt: string): Buffer {
