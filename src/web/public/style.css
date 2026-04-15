@@ -947,8 +947,8 @@ body {
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: rgba(34, 37, 50, 0.5);
-  border: 1px solid rgba(155, 168, 255, 0.2);
+  background: var(--surface-container-highest);
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--primary);
   font-size: 0.65rem;
@@ -1187,6 +1187,29 @@ body {
 .type-feedback  { background: rgba(34, 197, 94, 0.1); color: var(--success); }
 .type-project   { background: rgba(234, 179, 8, 0.1); color: var(--warning); }
 .type-reference { background: rgba(166, 140, 255, 0.1); color: var(--secondary); }
+
+.memory-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.memory-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.memory-card:hover .memory-delete-btn { opacity: 1; }
+.memory-delete-btn:hover { color: var(--error); }
+.memory-delete-btn .material-symbols-outlined { font-size: 16px; }
 
 .memory-fact { font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; }
 .memory-detail { font-size: 0.72rem; color: var(--text-3); line-height: 1.5; }

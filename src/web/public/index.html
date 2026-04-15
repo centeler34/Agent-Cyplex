@@ -159,6 +159,91 @@
         </div>
       </section>
 
+      <!-- Search Side Panel -->
+      <section class="side-panel" id="search-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Search</h2>
+        </div>
+        <div style="padding:0 12px">
+          <input type="text" id="sideSearchInput" class="search-sm" placeholder="Search agents, tasks, logs..." style="width:100%;margin-bottom:12px">
+        </div>
+        <div id="search-results" class="card-grid" style="padding:8px 12px">
+          <div class="empty-state" style="padding:24px 8px">Type a query to search across agents, tasks, memories, and audit logs.</div>
+        </div>
+      </section>
+
+      <!-- Tools Side Panel -->
+      <section class="side-panel" id="tools-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Tools</h2>
+        </div>
+        <div class="quick-grid" style="padding:8px">
+          <button class="qa-chip" data-cmd="keys list">
+            <span class="material-symbols-outlined">key</span>Keystore
+          </button>
+          <button class="qa-chip" data-cmd="audit query --last 1h">
+            <span class="material-symbols-outlined">shield</span>Audit
+          </button>
+          <button class="qa-chip" data-cmd="config show">
+            <span class="material-symbols-outlined">tune</span>Config
+          </button>
+          <button class="qa-chip" data-cmd="health check">
+            <span class="material-symbols-outlined">monitor_heart</span>Health
+          </button>
+          <button class="qa-chip" data-cmd="skill list">
+            <span class="material-symbols-outlined">extension</span>Skills
+          </button>
+          <button class="qa-chip" data-cmd="rate-limit status">
+            <span class="material-symbols-outlined">speed</span>Limits
+          </button>
+        </div>
+      </section>
+
+      <!-- Extensions Side Panel -->
+      <section class="side-panel" id="extensions-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Extensions</h2>
+        </div>
+        <div class="card-grid" style="padding:8px 12px">
+          <div class="empty-state" style="padding:24px 8px">No extensions installed. Extensions can add custom skills, integrations, and tools.</div>
+        </div>
+      </section>
+
+      <!-- Settings Side Panel -->
+      <section class="side-panel" id="settings-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Settings</h2>
+        </div>
+        <div style="padding:8px 16px; display:flex; flex-direction:column; gap:12px;">
+          <div class="sys-row"><span>Theme</span><span class="sys-val">Neon Architect</span></div>
+          <div class="sys-row"><span>Font Size</span><span class="sys-val">12.5px</span></div>
+          <div class="sys-row"><span>Default Provider</span><span class="sys-val" id="settings-provider">anthropic</span></div>
+          <div class="sys-row"><span>Max Terminal Lines</span><span class="sys-val">500</span></div>
+          <div class="sys-row"><span>Heartbeat Interval</span><span class="sys-val">5s</span></div>
+          <div class="sys-row"><span>Auto-scroll</span><span class="sys-val sys-ok">Enabled</span></div>
+        </div>
+      </section>
+
+      <!-- Account Side Panel -->
+      <section class="side-panel" id="account-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Account</h2>
+        </div>
+        <div style="padding:12px 16px; display:flex; flex-direction:column; gap:14px;">
+          <div style="text-align:center; padding:16px 0">
+            <div style="width:48px;height:48px;margin:0 auto 8px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:var(--radius-xl);display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="color:var(--on-primary);font-size:24px">person</span>
+            </div>
+            <div style="font-weight:600;font-size:0.85rem" id="account-user">Operator</div>
+            <div style="font-size:0.65rem;color:var(--text-3)">Local Session</div>
+          </div>
+          <div class="sys-row"><span>Auth</span><span class="sys-val sys-ok">Active</span></div>
+          <div class="sys-row"><span>Encryption</span><span class="sys-val sys-ok">AES-256-GCM</span></div>
+          <div class="sys-row"><span>KDF</span><span class="sys-val">Argon2id</span></div>
+          <div class="sys-row"><span>Session</span><span class="sys-val" id="account-session">--</span></div>
+        </div>
+      </section>
+
       <!-- Main Content Area -->
       <main class="main-content">
 
@@ -187,6 +272,7 @@
             <h3>Agent Memory Store</h3>
             <div class="tab-head-actions">
               <input type="text" id="memorySearchInput" class="search-sm" placeholder="Search memories...">
+              <button class="btn-ghost-sm" id="clearAllMemoriesBtn" title="Clear all memories">Clear All</button>
               <button class="btn-accent-sm" id="createMemoryBtn">+ New</button>
             </div>
           </div>
