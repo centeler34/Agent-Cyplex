@@ -553,20 +553,48 @@ function addChatMessage(role, text) {
 
   if (role === 'user') {
     wrapper.className = 'chat-msg-user';
-    wrapper.innerHTML = `
-      <div class="chat-bubble">${esc(text)}</div>
-      <span class="chat-timestamp">${timestamp}</span>
-    `;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = text;
+
+    const ts = document.createElement('span');
+    ts.className = 'chat-timestamp';
+    ts.textContent = timestamp;
+
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(ts);
   } else {
     wrapper.className = 'chat-msg-ai';
-    wrapper.innerHTML = `
-      <div class="chat-msg-ai-header">
-        <div class="chat-ai-icon"><span class="material-symbols-outlined">auto_awesome</span></div>
-        <span class="chat-ai-label">Agent v0</span>
-      </div>
-      <div class="chat-bubble">${text}</div>
-      <span class="chat-timestamp">${timestamp}</span>
-    `;
+
+    const header = document.createElement('div');
+    header.className = 'chat-msg-ai-header';
+
+    const iconWrap = document.createElement('div');
+    iconWrap.className = 'chat-ai-icon';
+    const icon = document.createElement('span');
+    icon.className = 'material-symbols-outlined';
+    icon.textContent = 'auto_awesome';
+    iconWrap.appendChild(icon);
+
+    const label = document.createElement('span');
+    label.className = 'chat-ai-label';
+    label.textContent = 'Agent v0';
+
+    header.appendChild(iconWrap);
+    header.appendChild(label);
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = text;
+
+    const ts = document.createElement('span');
+    ts.className = 'chat-timestamp';
+    ts.textContent = timestamp;
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(ts);
   }
 
   chatMessages.appendChild(wrapper);
