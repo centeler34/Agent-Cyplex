@@ -32,7 +32,7 @@ app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '0');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://localhost:* ws://localhost:*; img-src 'self' data:; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' wss://localhost:* ws://localhost:*; img-src 'self' data:; frame-ancestors 'none'");
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
@@ -359,6 +359,87 @@ io.on('connection', (socket: import('socket.io').Socket) => {
 
     client.on('error', () => {
       socket.emit('task_error', { message: 'Failed to communicate with daemon. Is it running?' });
+    });
+  });
+
+  // ── AI Chat ──────────────────────────────────────────────────────────────
+  // Routes chat messages to the daemon as chat-type tasks.
+  // The daemon can dispatch them through the gateway to the selected model.
+
+  socket.on('chat_send', (data: any) => {
+    if (!authenticatedSockets.has(socket.id)) {
+      socket.emit('chat_error', { message: 'Authentication required.' });
+      return;
+    }
+
+    if (!data || typeof data !== 'object' || typeof data.message !== 'string') {
+      socket.emit('chat_error', { message: 'Invalid chat payload.' });
+      return;
+    }
+
+    const { message, model } = data as { message: string; model?: string };
+
+    if (message.length === 0 || message.length > 10000) {
+      socket.emit('chat_error', { message: 'Message must be 1-10000 characters.' });
+      return;
+    }
+
+    // Proxy to daemon as a chat task
+    const client = net.createConnection(SOCKET_PATH);
+    const chatPayload = JSON.stringify({
+      id: randomUUID(),
+      type: 'chat_message',
+      payload: {
+        message,
+        model: model || 'anthropic',
+      },
+    });
+
+    client.on('connect', () => {
+      const lenBuf = Buffer.alloc(4);
+      lenBuf.writeUInt32BE(chatPayload.length, 0);
+      client.write(Buffer.concat([lenBuf, Buffer.from(chatPayload)]));
+    });
+
+    let chatBuffer = Buffer.alloc(0);
+    client.on('data', (chunk) => {
+      chatBuffer = Buffer.concat([chatBuffer, chunk]);
+
+      while (chatBuffer.length >= 4) {
+        const msgLen = chatBuffer.readUInt32BE(0);
+        if (msgLen > 10 * 1024 * 1024) {
+          client.destroy();
+          socket.emit('chat_error', { message: 'Response too large' });
+          return;
+        }
+        if (chatBuffer.length < 4 + msgLen) break;
+
+        const jsonBuf = chatBuffer.subarray(4, 4 + msgLen);
+        chatBuffer = chatBuffer.subarray(4 + msgLen);
+
+        try {
+          const response = JSON.parse(jsonBuf.toString('utf-8'));
+
+          if (response.type === 'chat_chunk') {
+            socket.emit('chat_chunk', { delta: response.payload?.delta || '' });
+          } else if (response.type === 'chat_response') {
+            socket.emit('chat_response', { content: response.payload?.content || '' });
+            client.end();
+          } else if (response.type === 'chat_error') {
+            socket.emit('chat_error', { message: response.payload?.error || 'Unknown error' });
+            client.end();
+          }
+        } catch {
+          // Skip malformed messages
+        }
+      }
+    });
+
+    client.on('error', () => {
+      // Daemon not reachable — fall back to a friendly message
+      socket.emit('chat_response', {
+        content: 'The daemon is not running. Start it with `agent-v0 daemon start`, then try again.',
+      });
     });
   });
 });
