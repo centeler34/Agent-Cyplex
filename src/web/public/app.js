@@ -650,10 +650,17 @@ function addChatMessage(role, text) {
 
   if (role === 'user') {
     wrapper.className = 'chat-msg-user';
-    wrapper.innerHTML = `
-      <div class="chat-bubble">${esc(text)}</div>
-      <span class="chat-timestamp">${timestamp}</span>
-    `;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = text;
+
+    const ts = document.createElement('span');
+    ts.className = 'chat-timestamp';
+    ts.textContent = timestamp;
+
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(ts);
   } else {
     wrapper.className = 'chat-msg-ai';
     wrapper.innerHTML = `
