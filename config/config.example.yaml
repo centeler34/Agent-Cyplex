@@ -21,19 +21,29 @@ agent-v0:
     fallback_provider: "openai"
     timeout_ms: 30000
     max_retries: 3
+    # auth_mode: "api_key" (default) or "subscription"
+    #
+    # Subscription mode lets you use your existing paid subscription login
+    # instead of managing separate API keys:
+    #   • anthropic  → routes through `claude` CLI (Claude Pro/Team)
+    #   • openai     → uses ChatGPT session token (ChatGPT Plus/Pro/Team)
+    #   • gemini     → uses gcloud ADC OAuth (Google One AI Premium)
     providers:
       anthropic:
         model: "claude-sonnet-4-6"
         key_ref: "anthropic_api_key"
+        # auth_mode: "subscription"  # uncomment to use Claude subscription via CLI
       openai:
         model: "gpt-4o"
         key_ref: "openai_api_key"
+        # auth_mode: "subscription"  # uncomment to use ChatGPT subscription
+        # key_ref: "chatgpt_access_token"  # set this when using subscription mode
       gemini:
         model: "gemini-pro"
         key_ref: "google_ai_api_key"
+        # auth_mode: "subscription"  # uncomment to use gcloud ADC (run: gcloud auth application-default login)
       claude_code:
-        # Routes requests through the Claude Code SDK (Agent SDK).
-        # Requires `@anthropic-ai/claude-code` and an active Claude Code session.
+        # Routes requests through the Claude Code CLI.
         # No API key needed — uses the ambient Claude Code authentication.
         model: "claude-sonnet-4-6"
 

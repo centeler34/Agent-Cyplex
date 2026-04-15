@@ -253,21 +253,55 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
 
   // Anthropic
   console.log(`    ${x.purple}┃${x.reset} ${x.bold}${x.white}Anthropic${x.reset} ${x.dim}(Claude)${x.reset}`);
-  const anthropicKey = await askSecret(rl, 'API key (sk-ant-...)');
-  if (anthropicKey) {
-    keys['anthropic_api_key'] = anthropicKey;
-    logSuccess('Anthropic key saved');
+  const anthropicAuthIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-ant-...)',
+    'Subscription (Claude Pro/Team — uses claude CLI)',
+    'Skip',
+  ], 0);
+  if (anthropicAuthIdx === 0) {
+    const anthropicKey = await askSecret(rl, 'API key (sk-ant-...)');
+    if (anthropicKey) {
+      keys['anthropic_api_key'] = anthropicKey;
+      logSuccess('Anthropic API key saved');
+    } else {
+      logWarn('Anthropic skipped');
+    }
+  } else if (anthropicAuthIdx === 1) {
+    keys['anthropic_subscription'] = 'true';
+    logSuccess('Anthropic subscription mode — requests route through claude CLI');
   } else {
     logWarn('Anthropic skipped');
   }
   console.log('');
 
   // OpenAI
-  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}OpenAI${x.reset} ${x.dim}(GPT)${x.reset}`);
-  const openaiKey = await askSecret(rl, 'API key (sk-...)');
-  if (openaiKey) {
-    keys['openai_api_key'] = openaiKey;
-    logSuccess('OpenAI key saved');
+  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}OpenAI / ChatGPT${x.reset}`);
+  const openaiAuthIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-...)',
+    'Subscription (ChatGPT Plus/Pro — session token)',
+    'Skip',
+  ], 0);
+  if (openaiAuthIdx === 0) {
+    const openaiKey = await askSecret(rl, 'API key (sk-...)');
+    if (openaiKey) {
+      keys['openai_api_key'] = openaiKey;
+      logSuccess('OpenAI API key saved');
+    } else {
+      logWarn('OpenAI skipped');
+    }
+  } else if (openaiAuthIdx === 1) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}To get your session token:${x.reset}`);
+    console.log(`      ${x.dim}1. Log into ${x.white}chatgpt.com${x.dim} in your browser${x.reset}`);
+    console.log(`      ${x.dim}2. Visit ${x.white}chatgpt.com/api/auth/session${x.reset}`);
+    console.log(`      ${x.dim}3. Copy the ${x.white}accessToken${x.dim} value${x.reset}`);
+    const sessionToken = await askSecret(rl, 'ChatGPT access token');
+    if (sessionToken) {
+      keys['chatgpt_access_token'] = sessionToken;
+      keys['openai_subscription'] = 'true';
+      logSuccess('ChatGPT subscription token saved');
+    } else {
+      logWarn('OpenAI skipped');
+    }
   } else {
     logWarn('OpenAI skipped');
   }
@@ -275,10 +309,24 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
 
   // Gemini
   console.log(`    ${x.blue}┃${x.reset} ${x.bold}${x.white}Google Gemini${x.reset}`);
-  const geminiKey = await askSecret(rl, 'API key (AI...)');
-  if (geminiKey) {
-    keys['google_ai_api_key'] = geminiKey;
-    logSuccess('Gemini key saved');
+  const geminiAuthIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (AI...)',
+    'Subscription (Google account — uses gcloud ADC)',
+    'Skip',
+  ], 0);
+  if (geminiAuthIdx === 0) {
+    const geminiKey = await askSecret(rl, 'API key (AI...)');
+    if (geminiKey) {
+      keys['google_ai_api_key'] = geminiKey;
+      logSuccess('Gemini API key saved');
+    } else {
+      logWarn('Gemini skipped');
+    }
+  } else if (geminiAuthIdx === 1) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}Make sure you've run:${x.reset}`);
+    console.log(`      ${x.white}gcloud auth application-default login${x.reset}`);
+    keys['gemini_subscription'] = 'true';
+    logSuccess('Gemini subscription mode — requests use gcloud OAuth');
   } else {
     logWarn('Gemini skipped');
   }
@@ -297,9 +345,9 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
 
   // Default provider
   const configured = [];
-  if (keys['anthropic_api_key']) configured.push('anthropic');
-  if (keys['openai_api_key']) configured.push('openai');
-  if (keys['google_ai_api_key']) configured.push('gemini');
+  if (keys['anthropic_api_key'] || keys['anthropic_subscription']) configured.push('anthropic');
+  if (keys['openai_api_key'] || keys['openai_subscription']) configured.push('openai');
+  if (keys['google_ai_api_key'] || keys['gemini_subscription']) configured.push('gemini');
   if (keys['claude_code_enabled']) configured.push('claude_code');
 
   let defaultProvider = 'anthropic';
@@ -405,17 +453,24 @@ function generateConfig(cfg: SetupConfig): string {
     providers:
 ${cfg.keys['anthropic_api_key'] ? `      anthropic:
         model: "claude-sonnet-4-6"
-        key_ref: "anthropic_api_key"` : `      # anthropic:
+        key_ref: "anthropic_api_key"` : cfg.keys['anthropic_subscription'] ? `      anthropic:
+        model: "claude-sonnet-4-6"
+        auth_mode: "subscription"` : `      # anthropic:
       #   model: "claude-sonnet-4-6"
       #   key_ref: "anthropic_api_key"`}
 ${cfg.keys['openai_api_key'] ? `      openai:
         model: "gpt-4o"
-        key_ref: "openai_api_key"` : `      # openai:
+        key_ref: "openai_api_key"` : cfg.keys['openai_subscription'] ? `      openai:
+        model: "gpt-4o"
+        auth_mode: "subscription"
+        key_ref: "chatgpt_access_token"` : `      # openai:
       #   model: "gpt-4o"
       #   key_ref: "openai_api_key"`}
 ${cfg.keys['google_ai_api_key'] ? `      gemini:
         model: "gemini-pro"
-        key_ref: "google_ai_api_key"` : `      # gemini:
+        key_ref: "google_ai_api_key"` : cfg.keys['gemini_subscription'] ? `      gemini:
+        model: "gemini-pro"
+        auth_mode: "subscription"` : `      # gemini:
       #   model: "gemini-pro"
       #   key_ref: "google_ai_api_key"`}
 ${cfg.keys['claude_code_enabled'] ? `      claude_code:
