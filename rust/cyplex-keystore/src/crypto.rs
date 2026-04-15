@@ -82,9 +82,7 @@ mod tests {
     use rand::Rng;
 
     fn generate_test_key() -> [u8; 32] {
-        let mut key = [0u8; 32];
-        rand::rng().fill(&mut key);
-        key
+        rand::random::<[u8; 32]>()
     }
 
     #[test]
