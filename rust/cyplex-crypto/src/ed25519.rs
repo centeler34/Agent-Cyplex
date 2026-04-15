@@ -46,11 +46,17 @@ pub fn verify_ed25519(
 mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
-    use rand::rngs::OsRng;
+    use rand::Rng;
+
+    fn generate_signing_key() -> SigningKey {
+        let mut secret = [0u8; 32];
+        rand::rng().fill(&mut secret);
+        SigningKey::from_bytes(&secret)
+    }
 
     #[test]
     fn valid_signature_accepted() {
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let signing_key = generate_signing_key();
         let verifying_key = signing_key.verifying_key();
 
         let message = b"discord interaction body";
@@ -67,7 +73,7 @@ mod tests {
 
     #[test]
     fn invalid_signature_rejected() {
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let signing_key = generate_signing_key();
         let verifying_key = signing_key.verifying_key();
 
         let message = b"discord interaction body";

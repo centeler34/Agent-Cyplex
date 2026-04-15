@@ -1,4 +1,4 @@
-use rand::RngCore;
+use rand::RngCore as _;
 use zeroize::Zeroize;
 
 use crate::crypto::derive_key_argon2id;
@@ -16,7 +16,7 @@ impl MasterKey {
     /// the keystore so the key can be re-derived later).
     pub fn derive(password: &str) -> Result<(Self, Vec<u8>), KeystoreError> {
         let mut salt = vec![0u8; 16];
-        rand::rngs::OsRng.fill_bytes(&mut salt);
+        rand::rng().fill_bytes(&mut salt);
         let bytes = derive_key_argon2id(password.as_bytes(), &salt)?;
         Ok((Self { bytes }, salt))
     }
