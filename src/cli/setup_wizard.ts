@@ -208,7 +208,7 @@ async function stepWelcome(rl: readline.Interface): Promise<void> {
     `${x.white}This wizard sets up your personal AI hub:${x.reset}`,
     ``,
     `  ${x.brightCyan}01${x.reset}  ${x.white}Master password${x.reset}     ${x.dim}AES-256 encrypted keystore${x.reset}`,
-    `  ${x.brightCyan}02${x.reset}  ${x.white}Cloud AI providers${x.reset}  ${x.dim}Anthropic, OpenAI, Gemini${x.reset}`,
+    `  ${x.brightCyan}02${x.reset}  ${x.white}Cloud AI providers${x.reset}  ${x.dim}Anthropic, OpenAI, Gemini, Claude Code${x.reset}`,
     `  ${x.brightCyan}03${x.reset}  ${x.white}Bot integrations${x.reset}    ${x.dim}Telegram, Discord, WhatsApp${x.reset}`,
     `  ${x.brightCyan}04${x.reset}  ${x.white}Daemon settings${x.reset}     ${x.dim}Logging, socket config${x.reset}`,
     ``,
@@ -284,11 +284,23 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
   }
   console.log('');
 
+  // Claude Code (Agent SDK) — no API key needed
+  console.log(`    ${x.purple}┃${x.reset} ${x.bold}${x.white}Claude Code${x.reset} ${x.dim}(Agent SDK — no API key needed)${x.reset}`);
+  const useClaudeCode = await askYesNo(rl, 'Route requests through Claude Code?', false);
+  if (useClaudeCode) {
+    keys['claude_code_enabled'] = 'true';
+    logSuccess('Claude Code adapter enabled');
+  } else {
+    logWarn('Claude Code skipped');
+  }
+  console.log('');
+
   // Default provider
   const configured = [];
   if (keys['anthropic_api_key']) configured.push('anthropic');
   if (keys['openai_api_key']) configured.push('openai');
   if (keys['google_ai_api_key']) configured.push('gemini');
+  if (keys['claude_code_enabled']) configured.push('claude_code');
 
   let defaultProvider = 'anthropic';
   let fallbackProvider = 'openai';
@@ -406,6 +418,9 @@ ${cfg.keys['google_ai_api_key'] ? `      gemini:
         key_ref: "google_ai_api_key"` : `      # gemini:
       #   model: "gemini-pro"
       #   key_ref: "google_ai_api_key"`}
+${cfg.keys['claude_code_enabled'] ? `      claude_code:
+        model: "claude-sonnet-4-6"` : `      # claude_code:
+      #   model: "claude-sonnet-4-6"`}
 
   # Agent Fleet Configuration
   # You can add as many specialized agents as you desire.

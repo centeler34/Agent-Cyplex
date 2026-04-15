@@ -2,7 +2,7 @@
  * Gateway provider configuration types.
  */
 
-export type ProviderType = 'anthropic' | 'openai' | 'gemini' | 'mistral';
+export type ProviderType = 'anthropic' | 'openai' | 'gemini' | 'mistral' | 'claude_code';
 
 export interface ProviderConfig {
   name: string;
