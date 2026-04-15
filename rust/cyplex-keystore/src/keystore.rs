@@ -154,13 +154,14 @@ fn chrono_now() -> String {
 mod tests {
     use super::*;
     use crate::master_key::MasterKey;
-    use rand::Rng;
+    use rand::RngCore;
 
     const TEST_PASSWORD: &str = "test-pass";
 
     fn random_test_secret(len: usize) -> Vec<u8> {
-        let mut buf = vec![0u8; len];
-        rand::rng().fill(&mut buf[..]);
+        let mut buf = Vec::with_capacity(len);
+        buf.resize(len, 0);
+        rand::rng().fill_bytes(&mut buf);
         buf
     }
 
