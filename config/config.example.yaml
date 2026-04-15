@@ -31,6 +31,11 @@ agent-v0:
       gemini:
         model: "gemini-pro"
         key_ref: "google_ai_api_key"
+      claude_code:
+        # Routes requests through the Claude Code SDK (Agent SDK).
+        # Requires `@anthropic-ai/claude-code` and an active Claude Code session.
+        # No API key needed — uses the ambient Claude Code authentication.
+        model: "claude-sonnet-4-6"
 
   agents:
     agentic:
