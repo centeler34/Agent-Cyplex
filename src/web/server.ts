@@ -424,6 +424,7 @@ io.on('connection', (socket: import('socket.io').Socket) => {
             socket.emit('chat_chunk', { delta: response.payload?.delta || '' });
           } else if (response.type === 'chat_response') {
             socket.emit('chat_response', { content: response.payload?.content || '' });
+            socket.emit('chat_complete');
             client.end();
           } else if (response.type === 'chat_error') {
             socket.emit('chat_error', { message: response.payload?.error || 'Unknown error' });
@@ -435,11 +436,17 @@ io.on('connection', (socket: import('socket.io').Socket) => {
       }
     });
 
+    client.on('end', () => {
+      // Daemon closed the connection — finalize any in-progress stream.
+      socket.emit('chat_complete');
+    });
+
     client.on('error', () => {
       // Daemon not reachable — fall back to a friendly message
       socket.emit('chat_response', {
         content: 'The daemon is not running. Start it with `agent-v0 daemon start`, then try again.',
       });
+      socket.emit('chat_complete');
     });
   });
 });

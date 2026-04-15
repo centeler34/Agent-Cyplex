@@ -198,12 +198,44 @@ $('topbar-nav').addEventListener('click', (e) => {
   if (link) showTab(link.dataset.section);
 });
 
-// ── Icon Rail ───────────────────────────────────────────────────────────────
+// ── Icon Rail (Side Panel Switching) ────────────────────────────────────────
+
+const SIDE_PANELS = ['fleet', 'search', 'tools', 'extensions', 'settings', 'account'];
+let activeSidePanel = 'fleet';
+
+function showSidePanel(panelName) {
+  // Hide all side panels
+  SIDE_PANELS.forEach(name => {
+    const el = $(`${name}-panel`);
+    if (el) el.style.display = 'none';
+  });
+
+  // Special case: "chat" toggles the right-side chat panel
+  if (panelName === 'chat') {
+    const chatPanel = $('chat-panel');
+    chatPanel.style.display = chatPanel.style.display === 'none' ? 'flex' : 'none';
+    // Re-show the previously active side panel
+    const activeEl = $(`${activeSidePanel}-panel`);
+    if (activeEl) activeEl.style.display = 'flex';
+    return;
+  }
+
+  // Show the selected panel
+  const panel = $(`${panelName}-panel`);
+  if (panel) {
+    panel.style.display = 'flex';
+    activeSidePanel = panelName;
+  }
+
+  // Update rail button active states
+  document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.rail-btn[data-panel="${panelName}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+}
 
 document.querySelectorAll('.rail-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    showSidePanel(btn.dataset.panel);
   });
 });
 
@@ -453,8 +485,32 @@ socket.on('memory_saved', () => {
   socket.emit('get_memories');
 });
 
+socket.on('memory_error', (data) => {
+  toast(data.message || 'Memory operation failed', 'error');
+});
+
+socket.on('memories_cleared', () => {
+  toast('All memories cleared', 'success');
+  socket.emit('get_memories');
+});
+
 socket.on('memories_list', (memories) => renderMemories(memories));
 socket.on('memories_search_results', (memories) => renderMemories(memories));
+
+function deleteMemory(memoryId) {
+  if (!memoryId) return;
+  socket.emit('delete_memory', { id: memoryId });
+  toast('Deleting memory...', 'info', 1500);
+  // Refresh after a short delay (server doesn't emit a dedicated delete confirmation)
+  setTimeout(() => socket.emit('get_memories'), 500);
+}
+
+function clearAllMemories() {
+  if (!confirm('Clear ALL memories? This cannot be undone.')) return;
+  socket.emit('clear_all_memories');
+}
+
+$('clearAllMemoriesBtn').addEventListener('click', clearAllMemories);
 
 function renderMemories(memories) {
   const list = $('memory-list');
@@ -469,12 +525,26 @@ function renderMemories(memories) {
     const content = m.content || m.fact || '';
     const why = m.why || '';
     const how = m.howToApply || m.how_to_apply || '';
+    const memId = m.id || m._id || '';
     card.innerHTML = `
-      <span class="memory-type type-${esc(m.type)}">${esc(m.type)}</span>
+      <div class="memory-card-header">
+        <span class="memory-type type-${esc(m.type)}">${esc(m.type)}</span>
+        <button class="memory-delete-btn" title="Delete memory" data-memory-id="${esc(memId)}">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
       <div class="memory-fact">${esc(content)}</div>
       ${why ? `<div class="memory-detail"><strong>Why:</strong> ${esc(why)}</div>` : ''}
       ${how ? `<div class="memory-detail"><strong>Apply:</strong> ${esc(how)}</div>` : ''}
     `;
+    // Wire delete button
+    const delBtn = card.querySelector('.memory-delete-btn');
+    if (delBtn) {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteMemory(delBtn.dataset.memoryId);
+      });
+    }
     list.appendChild(card);
   });
 }
@@ -543,6 +613,33 @@ function sendChatMessage() {
   socket.emit('chat_send', { message: text, model });
 }
 
+/**
+ * Render basic markdown: fenced code blocks, inline code, bold, italic.
+ * Input is assumed to be untrusted — we escape first, then apply formatting.
+ */
+function renderMarkdown(raw) {
+  let text = esc(raw);
+
+  // Fenced code blocks: ```lang\n...\n```
+  text = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => {
+    return `<div class="code-block" data-lang="${lang}">${code.trimEnd()}</div>`;
+  });
+
+  // Inline code: `...`
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Bold: **...**
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Italic: *...*
+  text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+
+  // Line breaks
+  text = text.replace(/\n/g, '<br>');
+
+  return text;
+}
+
 function addChatMessage(role, text) {
   // Remove welcome message if present
   const welcome = chatMessages.querySelector('.chat-welcome');
@@ -564,7 +661,7 @@ function addChatMessage(role, text) {
         <div class="chat-ai-icon"><span class="material-symbols-outlined">auto_awesome</span></div>
         <span class="chat-ai-label">Agent v0</span>
       </div>
-      <div class="chat-bubble">${text}</div>
+      <div class="chat-bubble">${renderMarkdown(text)}</div>
       <span class="chat-timestamp">${timestamp}</span>
     `;
   }
@@ -609,9 +706,12 @@ function finalizeChatResponse() {
   removeChatThinking();
 
   if (currentChatBubble && chatResponseBuffer) {
+    // Re-render with markdown now that we have the full text
+    currentChatBubble.innerHTML = renderMarkdown(chatResponseBuffer);
+
     // Add action chips
     const wrapper = currentChatBubble.closest('.chat-msg-ai');
-    if (wrapper) {
+    if (wrapper && !wrapper.querySelector('.chat-actions')) {
       const actions = document.createElement('div');
       actions.className = 'chat-actions';
       actions.innerHTML = `
@@ -630,8 +730,22 @@ function finalizeChatResponse() {
 // Chat response events from server
 socket.on('chat_response', (data) => {
   removeChatThinking();
-  addChatMessage('ai', data.content || data.text || '');
-  finalizeChatResponse();
+  const text = data.content || data.text || '';
+  addChatMessage('ai', text);
+  // Non-streamed response — add copy action right away
+  const lastAi = chatMessages.querySelector('.chat-msg-ai:last-child');
+  if (lastAi && !lastAi.querySelector('.chat-actions')) {
+    const actions = document.createElement('div');
+    actions.className = 'chat-actions';
+    actions.innerHTML = `
+      <button class="chat-action-chip" onclick="navigator.clipboard.writeText(this.closest('.chat-msg-ai').querySelector('.chat-bubble').textContent); toast('Copied', 'success')">
+        <span class="material-symbols-outlined">content_copy</span> Copy
+      </button>
+    `;
+    lastAi.appendChild(actions);
+  }
+  currentChatBubble = null;
+  chatResponseBuffer = '';
 });
 
 socket.on('chat_chunk', (data) => {
@@ -661,6 +775,45 @@ chatInput.addEventListener('keydown', (e) => {
 
 // AI Sync button toggles chat panel visibility
 $('aiSyncBtn').addEventListener('click', () => {
-  const panel = $('chat-panel');
-  panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+  showSidePanel('chat');
 });
+
+// ── Side Panel Search ──────────────────────────────────────────────────────
+
+const sideSearchInput = $('sideSearchInput');
+if (sideSearchInput) {
+  sideSearchInput.addEventListener('keyup', () => {
+    const query = sideSearchInput.value.trim().toLowerCase();
+    const results = $('search-results');
+    if (!query) {
+      results.innerHTML = '<div class="empty-state" style="padding:24px 8px">Type a query to search across agents, tasks, memories, and audit logs.</div>';
+      return;
+    }
+
+    // Search agents
+    const matchedAgents = DEFAULT_AGENTS.filter(a =>
+      a.id.toLowerCase().includes(query) || a.role.toLowerCase().includes(query)
+    );
+
+    results.innerHTML = '';
+    if (matchedAgents.length > 0) {
+      const heading = document.createElement('div');
+      heading.style.cssText = 'font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-3);padding:4px 0;font-weight:700';
+      heading.textContent = 'Agents';
+      results.appendChild(heading);
+      matchedAgents.forEach(a => {
+        const item = document.createElement('div');
+        item.className = 'agent-item';
+        item.innerHTML = `<span class="agent-dot idle"></span><span class="agent-name">${esc(a.id)}</span><span class="agent-role">${esc(a.role)}</span>`;
+        results.appendChild(item);
+      });
+    }
+
+    if (results.children.length === 0) {
+      results.innerHTML = '<div class="empty-state" style="padding:24px 8px">No results found.</div>';
+    }
+
+    // Also trigger memory search
+    socket.emit('search_memories', { query });
+  });
+}
