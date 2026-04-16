@@ -71,6 +71,28 @@ agent-v0:
       #   key_ref: "qianfan_api_key"      # OpenAI-compatible key (bce-v3/...), not legacy AK/SK
       #   base_url: "https://qianfan.baidubce.com/v2"
 
+      # ── Local LLM Providers ──────────────────────────────────────────
+      # All use OpenAI-compatible APIs. No API keys required.
+      # Uncomment and adjust base_url to match your local server.
+      # ollama:
+      #   model: "llama3.2"              # or codellama, mistral, gemma2, phi3, etc.
+      #   base_url: "http://localhost:11434/v1"
+      # lm_studio:
+      #   model: "default"               # auto-selects loaded model
+      #   base_url: "http://localhost:1234/v1"
+      # localai:
+      #   model: "gpt-4"                 # model name matches your GGUF filename
+      #   base_url: "http://localhost:8080/v1"
+      # llamacpp:
+      #   model: "default"               # serves single model loaded at startup
+      #   base_url: "http://localhost:8080/v1"   # shares port with LocalAI — change if both running
+      # vllm:
+      #   model: "default"               # serves model from: vllm serve <model>
+      #   base_url: "http://localhost:8000/v1"
+      # jan:
+      #   model: "default"               # auto-selects loaded model in Jan
+      #   base_url: "http://localhost:1337/v1"
+
   agents:
     agentic:
       enabled: true
