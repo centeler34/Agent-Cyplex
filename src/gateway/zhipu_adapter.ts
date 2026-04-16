@@ -1,8 +1,11 @@
 /**
- * OpenAI adapter — implements ModelClient for the OpenAI API.
+ * Zhipu AI adapter — implements ModelClient for the Zhipu/CodeGeeX API.
  *
- * Models: gpt-4o, gpt-4.1, o3, o4-mini, gpt-4o-mini
- * Docs:   https://platform.openai.com/docs/models
+ * Zhipu AI (makers of GLM and CodeGeeX) provides an OpenAI-compatible API.
+ * API keys are in {id}.{secret} format (e.g., "abc123.xyz789").
+ *
+ * Models: glm-4.5-flash (free), glm-4.7-flash (free), glm-4.7, codegeex-4, glm-z1-flash (free)
+ * Docs:   https://open.bigmodel.cn/
  */
 
 import OpenAI from 'openai';
@@ -14,16 +17,24 @@ import type {
   ProviderConfig,
 } from '../types/provider_config.js';
 
-export class OpenAIAdapter implements ModelClient {
-  readonly provider = 'openai';
+const DEFAULT_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/';
+
+export class ZhipuAdapter implements ModelClient {
+  readonly provider = 'zhipu';
   private client: OpenAI;
   private model: string;
 
   constructor(config: ProviderConfig) {
     this.model = config.model;
+    const apiKey = config.key_ref ?? process.env.ZHIPU_API_KEY ?? '';
+
+    if (apiKey && !apiKey.includes('.')) {
+      console.warn('[zhipu] API key should be in {id}.{secret} format (e.g., "abc123.xyz789")');
+    }
+
     this.client = new OpenAI({
-      apiKey: config.key_ref ?? process.env.OPENAI_API_KEY,
-      ...(config.base_url ? { baseURL: config.base_url } : {}),
+      apiKey,
+      baseURL: config.base_url ?? DEFAULT_BASE_URL,
       timeout: config.timeout_ms,
       maxRetries: config.max_retries,
     });
@@ -101,7 +112,6 @@ export class OpenAIAdapter implements ModelClient {
   }
 
   countTokens(text: string): number {
-    // Approximate token count: ~4 characters per token for English text.
     return Math.ceil(text.length / 4);
   }
 }

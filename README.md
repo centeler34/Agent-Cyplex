@@ -4,7 +4,7 @@
 
 Agent v0 is a powerful framework for deploying fleets of specialized AI agents. While optimized for security researchers and developers, its modular architecture allows anyone to orchestrate complex, parallel workflows — from creative content creation and data analysis to automated research and technical troubleshooting — all from a single, secure terminal interface.
 
-> **Current version: v1.4.4** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
+> **Current version: v1.10.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
 
 ---
 
@@ -17,6 +17,7 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Web Dashboard](#web-dashboard)
 - [Self-Updater](#self-updater)
 - [Agent Roles](#agent-roles)
 - [Tool Integration](#tool-integration)
@@ -30,8 +31,11 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
 ## Features
 
 - **CLI-first** — Full terminal interface with interactive REPL, no GUI required
+- **Neon Architect web dashboard** — Full-featured HTTPS web UI with real-time Socket.IO streaming, AI chat, terminal, task management, memory store, and audit trail
 - **Multi-agent orchestration** — A central "Agentic" orchestrator decomposes tasks, delegates to specialized subordinate agents, and synthesizes results
-- **Model-agnostic** — Route tasks to Anthropic Claude, OpenAI GPT, or Google Gemini
+- **Model-agnostic** — Route tasks to Anthropic, OpenAI, Gemini, DeepSeek, Zhipu/CodeGeeX, Moonshot/Kimi, Qwen/DashScope, Baidu/ERNIE, or Claude Code CLI
+- **Subscription-based auth** — Use your existing Claude Pro, ChatGPT Plus, or Gemini Advanced subscription instead of managing API keys
+- **Chinese AI providers** — First-class support for DeepSeek, Zhipu AI (CodeGeeX/GLM), Moonshot AI (Kimi), Alibaba DashScope (Qwen), and Baidu Qianfan (ERNIE)
 - **OS-level sandboxing** — Agents are confined to assigned workspaces using bubblewrap (Linux) or sandbox-exec (macOS)
 - **Hash-chained audit logs** — Tamper-evident, append-only SHA-256 chained audit trail for every agent action
 - **Encrypted keystore** — API keys and secrets encrypted at rest with Argon2id key derivation
@@ -41,7 +45,6 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
 - **Persistent daemon** — Background daemon with Unix socket IPC; tasks survive CLI disconnection
 - **Bot integrations** — Telegram, Discord, and WhatsApp adapters for remote task submission
 - **Smart self-updater** — `agent-v0 update` checks GitHub releases, diffs files, and rebuilds only what changed
-- **Web dashboard** — HTTPS web UI with Socket.IO for real-time task monitoring
 - **Cost tracking** — Per-agent, per-session token usage and cost breakdown
 
 ---
@@ -93,9 +96,15 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
                           | fallback routing |
                           +--------+---------+
                                    |
-              +--------------------+--------------------+
-              |                    |                    |
-         Anthropic             OpenAI              Gemini
+              +----------+---------+---------+----------+
+              |          |         |                     |
+         Anthropic    OpenAI    Gemini            Claude Code
+         (API key)   (API key)  (API key)           (CLI)
+              |          |         |                     |
+         [subscription mode: session token / gcloud ADC / CLI auth]
+              |          |         |          |          |
+         DeepSeek     Zhipu     Moonshot   DashScope   Baidu
+         (API key)   (API key)  (API key)  (API key)  (API key)
 ```
 
 ### How It Works
@@ -145,7 +154,7 @@ Agent v0 implements defense-in-depth security across multiple layers. The core s
 #### Cryptographic Utilities (`rust/cyplex-crypto`)
 - **Ed25519 Signatures** — EdDSA for skill verification and inter-agent authentication
 - **HMAC-SHA256** — Message authentication with proper `Result` error handling (no panics)
-- **OS-Level CSPRNG** — All random generation uses `OsRng` (not `thread_rng`)
+- **CSPRNG** — All random generation uses `rand::rng()` (rand 0.9.3 ThreadRng backed by OS entropy)
 - **Zeroize on Drop** — All cryptographic material securely wiped after use
 
 #### IPC Security (`rust/cyplex-ipc`)
@@ -173,11 +182,63 @@ Agent v0 implements defense-in-depth security across multiple layers. The core s
 
 ## Supported AI Providers
 
-| Provider | Models | Type |
-|----------|--------|------|
-| **Anthropic** | Claude 4 Opus, Sonnet, Haiku | Cloud (pay-per-token) |
-| **OpenAI** | GPT-4o, GPT-4, GPT-3.5 | Cloud (pay-per-token) |
-| **Google Gemini** | Gemini Pro, Ultra | Cloud (pay-per-token) |
+| Provider | Models | Auth Modes |
+|----------|--------|------------|
+| **Anthropic** | Claude 4 Opus, Sonnet, Haiku | API key, Subscription (Claude Pro/Team via `claude` CLI) |
+| **OpenAI** | GPT-4o, GPT-4, GPT-3.5 | API key, Subscription (ChatGPT Plus/Pro session token) |
+| **Google Gemini** | Gemini Pro, Ultra | API key, Subscription (Google ADC via `gcloud auth`) |
+| **Claude Code** | Any Claude model | CLI (ambient subscription auth, no API key needed) |
+| **DeepSeek** | deepseek-chat, deepseek-reasoner | API key |
+| **Zhipu AI / CodeGeeX** | GLM-4.5-Flash (free), GLM-4.7, CodeGeeX-4 | API key ({id}.{secret} format) |
+| **Moonshot AI / Kimi** | moonshot-v1-auto, kimi-k2.5, moonshot-v1-128k | API key |
+| **Alibaba DashScope / Qwen** | qwen-plus, qwen3-coder-plus, qwen-max, qwen-turbo | API key |
+| **Baidu Qianfan / ERNIE** | ernie-4.5, ernie-4.0-turbo, ernie-x1 | API key (bce-v3/...) |
+
+### Chinese AI Providers
+
+All Chinese providers use OpenAI-compatible APIs — no additional SDK dependencies needed:
+
+```yaml
+providers:
+  deepseek:
+    model: "deepseek-chat"           # or deepseek-reasoner
+    key_ref: "deepseek_api_key"
+    base_url: "https://api.deepseek.com"
+  zhipu:
+    model: "glm-4.5-flash"           # free tier; or codegeex-4, glm-4.7
+    key_ref: "zhipu_api_key"
+    base_url: "https://open.bigmodel.cn/api/paas/v4/"
+  moonshot:
+    model: "moonshot-v1-auto"         # auto-selects 8k/32k/128k context
+    key_ref: "moonshot_api_key"
+    base_url: "https://api.moonshot.cn/v1"
+  dashscope:
+    model: "qwen-plus"               # or qwen3-coder-plus, qwen-max
+    key_ref: "dashscope_api_key"
+    base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+  baidu:
+    model: "ernie-4.5"               # or ernie-4.0-turbo, ernie-x1
+    key_ref: "qianfan_api_key"
+    base_url: "https://qianfan.baidubce.com/v2"
+```
+
+### Subscription-Based Authentication
+
+Set `auth_mode: "subscription"` in your provider config to authenticate via your existing paid subscription instead of managing API keys:
+
+```yaml
+providers:
+  anthropic:
+    model: "claude-sonnet-4-6"
+    auth_mode: "subscription"    # Routes through `claude` CLI
+  openai:
+    model: "gpt-4o"
+    auth_mode: "subscription"    # Uses ChatGPT session token
+    key_ref: "chatgpt_access_token"
+  gemini:
+    model: "gemini-pro"
+    auth_mode: "subscription"    # Uses gcloud ADC (OAuth)
+```
 
 ---
 
@@ -269,7 +330,7 @@ agent-v0
 On first launch, Agent v0 runs an **interactive setup wizard**:
 
 1. **Master password** — Encrypts all API keys in the keystore
-2. **Cloud AI providers** — Anthropic, OpenAI, Gemini API keys (stored encrypted, never in plaintext)
+2. **Cloud AI providers** — Choose between API key or subscription auth for Anthropic, OpenAI, Gemini, Claude Code, DeepSeek, Zhipu AI, Moonshot, DashScope, and Baidu
 3. **Bot integrations** — Telegram, Discord, WhatsApp tokens
 4. **Daemon settings** — Log level, socket path
 
@@ -344,11 +405,36 @@ agent-v0 keys list
 agent-v0 audit query --agent recon --last 1h
 ```
 
-### Web Dashboard
+---
+
+## Web Dashboard
+
+The Neon Architect web dashboard provides a full GUI for Agent v0:
 
 ```bash
 agent-v0 web start          # Launch HTTPS dashboard on localhost:3000
 ```
+
+### Features
+
+- **Auth overlay** — Master password login with rate limiting
+- **Terminal** — Command input with history (Up/Down arrows), 500-line scrollback
+- **Agent fleet panel** — Real-time agent status with 5-second heartbeat
+- **Task management** — Submit, monitor, and track tasks with status cards
+- **Memory store** — Create, search, delete, and clear agent memories
+- **Security audit trail** — Tamper-evident hash-chained log viewer with filtering
+- **AI chat panel** — Streaming chat with model selector (Claude Code, Anthropic, OpenAI, Gemini), markdown rendering (code blocks, bold, italic), and copy-to-clipboard
+- **7 side panels** — Fleet, Search, Tools, Extensions, Settings, Account, Chat toggle
+- **Keyboard shortcuts** — `/` focus command, `Ctrl+K` shortcuts overlay, `Ctrl+L` clear terminal, `1-4` switch tabs
+
+### Design System
+
+The dashboard uses the **Neon Architect** design system:
+- Deep tonal surfaces (#0c0e17 ink-pool through #282b3a)
+- No hard borders — tonal sectioning and ghost borders at 15% opacity
+- Glassmorphism (backdrop-filter blur) on modals and toasts
+- Typography: Space Grotesk (headlines), Manrope (body), JetBrains Mono (code)
+- Primary accent: #9ba8ff → secondary #a68cff gradient
 
 ---
 
@@ -359,14 +445,10 @@ agent-v0 web start          # Launch HTTPS dashboard on localhost:3000
 ```
 $ agent-v0 update
 
-  [*] Installed version: v1.4.4
+  [*] Installed version: v1.9.0
   [*] Checking for updates...
 
-  [*] Latest version:    v1.4.4  (released 2026-04-04)
-
   [+] You are already running the latest version!
-
-      No download needed. Agent v0 v1.4.4 is up to date.
 ```
 
 When a new version is available:
@@ -483,7 +565,7 @@ All incoming messages are normalized, routed through the Agentic orchestrator, a
 Agent-v0/
 +-- src/                    TypeScript core
 |   +-- orchestrator/       Task decomposition & orchestration
-|   +-- gateway/            Multi-provider AI routing
+|   +-- gateway/            Multi-provider AI routing + subscription + Chinese AI adapters
 |   +-- cli/                CLI entry point, commands, updater, setup wizard
 |   +-- daemon/             Background daemon & IPC
 |   +-- agents/             Specialized agent implementations (9 agents + base)
@@ -492,7 +574,7 @@ Agent-v0/
 |   +-- sessions/           Session & workspace management
 |   +-- skills/             Skill loading, execution & verification
 |   +-- tools/              Tool execution runtime & AgentToolkit
-|   +-- web/                Web dashboard (HTTPS + Socket.IO)
+|   +-- web/                Neon Architect web dashboard (HTTPS + Socket.IO)
 |   +-- types/              Shared type definitions
 +-- tools/                  Extended tool framework (React/Ink terminal UI)
 +-- rust/                   Rust security infrastructure
@@ -501,7 +583,7 @@ Agent-v0/
 |   +-- cyplex-keystore/    Encrypted key storage (AES-256-GCM + Argon2id)
 |   +-- cyplex-ipc/         Unix socket IPC with constant-time auth
 |   +-- cyplex-permissions/ Policy-based access control & network guards
-|   +-- cyplex-crypto/      Ed25519, HMAC-SHA256, OsRng, zeroize
+|   +-- cyplex-crypto/      Ed25519, HMAC-SHA256, CSPRNG (rand 0.9), zeroize
 +-- go/                     Go utilities
 |   +-- net-probe/          Network reconnaissance tools
 +-- python/                 Python microservices
@@ -520,12 +602,13 @@ Agent-v0/
 |-------|-----------|---------|
 | **Runtime** | Node.js | >= 20.0 |
 | **Language** | TypeScript | 6.0 |
-| **AI SDKs** | @anthropic-ai/sdk, openai, @google/generative-ai | 0.82, 6.33, 0.24 |
+| **AI SDKs** | @anthropic-ai/sdk, openai, @google/generative-ai | 0.82, 6.33, 0.24 (OpenAI SDK reused for DeepSeek, Zhipu, Moonshot, DashScope, Baidu) |
 | **CLI** | Commander.js | 14.0 |
 | **Web** | Express + Socket.IO | 5.2 + 4.8 |
 | **Bots** | grammy, discord.js, baileys | 1.42, 14.26, 7.0 |
 | **Security** | Rust (6 crates) | Edition 2021 |
 | **Crypto** | aes-gcm, argon2, ed25519-dalek, hmac, sha2, subtle | Latest stable |
+| **RNG** | rand 0.9.3 | CSPRNG via ThreadRng (OS-seeded) |
 | **Sandbox** | nix (Linux namespaces), libc | 0.31, 0.2 |
 | **Forensics** | Python (scapy, yara-python, volatility3, pefile) | Latest stable |
 | **Network** | Go net-probe | Go 1.23 |
@@ -535,4 +618,4 @@ Agent-v0/
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

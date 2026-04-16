@@ -1,8 +1,12 @@
 /**
- * OpenAI adapter — implements ModelClient for the OpenAI API.
+ * Baidu adapter — implements ModelClient for Baidu's ERNIE / Qianfan API.
  *
- * Models: gpt-4o, gpt-4.1, o3, o4-mini, gpt-4o-mini
- * Docs:   https://platform.openai.com/docs/models
+ * Baidu Qianfan provides an OpenAI-compatible v2 endpoint.
+ * Uses a Bearer API key (typically starting with "bce-v3/ALTAK-..."),
+ * NOT the legacy AK/SK OAuth flow.
+ *
+ * Models: ernie-4.5, ernie-4.0-turbo, ernie-x1 (reasoning), ernie-3.5
+ * Docs:   https://cloud.baidu.com/doc/WENXINWORKSHOP/
  */
 
 import OpenAI from 'openai';
@@ -14,16 +18,18 @@ import type {
   ProviderConfig,
 } from '../types/provider_config.js';
 
-export class OpenAIAdapter implements ModelClient {
-  readonly provider = 'openai';
+const DEFAULT_BASE_URL = 'https://qianfan.baidubce.com/v2';
+
+export class BaiduAdapter implements ModelClient {
+  readonly provider = 'baidu';
   private client: OpenAI;
   private model: string;
 
   constructor(config: ProviderConfig) {
     this.model = config.model;
     this.client = new OpenAI({
-      apiKey: config.key_ref ?? process.env.OPENAI_API_KEY,
-      ...(config.base_url ? { baseURL: config.base_url } : {}),
+      apiKey: config.key_ref ?? process.env.QIANFAN_API_KEY,
+      baseURL: config.base_url ?? DEFAULT_BASE_URL,
       timeout: config.timeout_ms,
       maxRetries: config.max_retries,
     });
@@ -101,7 +107,6 @@ export class OpenAIAdapter implements ModelClient {
   }
 
   countTokens(text: string): number {
-    // Approximate token count: ~4 characters per token for English text.
     return Math.ceil(text.length / 4);
   }
 }

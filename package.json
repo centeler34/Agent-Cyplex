@@ -1,6 +1,6 @@
 {
   "name": "agent-v0",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/centeler34/Agent-v0.git"
@@ -54,7 +54,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   },
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   }

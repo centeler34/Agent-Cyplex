@@ -1,8 +1,11 @@
 /**
- * OpenAI adapter — implements ModelClient for the OpenAI API.
+ * Moonshot AI adapter — implements ModelClient for the Kimi / Moonshot API.
  *
- * Models: gpt-4o, gpt-4.1, o3, o4-mini, gpt-4o-mini
- * Docs:   https://platform.openai.com/docs/models
+ * Moonshot AI's API is fully OpenAI-compatible. The moonshot-v1-auto model
+ * automatically selects context window size (8k/32k/128k) based on input length.
+ *
+ * Models: moonshot-v1-auto, kimi-k2.5, moonshot-v1-128k, moonshot-v1-32k, moonshot-v1-8k
+ * Docs:   https://platform.moonshot.cn/
  */
 
 import OpenAI from 'openai';
@@ -14,16 +17,18 @@ import type {
   ProviderConfig,
 } from '../types/provider_config.js';
 
-export class OpenAIAdapter implements ModelClient {
-  readonly provider = 'openai';
+const DEFAULT_BASE_URL = 'https://api.moonshot.cn/v1';
+
+export class MoonshotAdapter implements ModelClient {
+  readonly provider = 'moonshot';
   private client: OpenAI;
   private model: string;
 
   constructor(config: ProviderConfig) {
     this.model = config.model;
     this.client = new OpenAI({
-      apiKey: config.key_ref ?? process.env.OPENAI_API_KEY,
-      ...(config.base_url ? { baseURL: config.base_url } : {}),
+      apiKey: config.key_ref ?? process.env.MOONSHOT_API_KEY,
+      baseURL: config.base_url ?? DEFAULT_BASE_URL,
       timeout: config.timeout_ms,
       maxRetries: config.max_retries,
     });
@@ -101,7 +106,6 @@ export class OpenAIAdapter implements ModelClient {
   }
 
   countTokens(text: string): number {
-    // Approximate token count: ~4 characters per token for English text.
     return Math.ceil(text.length / 4);
   }
 }

@@ -208,7 +208,7 @@ async function stepWelcome(rl: readline.Interface): Promise<void> {
     `${x.white}This wizard sets up your personal AI hub:${x.reset}`,
     ``,
     `  ${x.brightCyan}01${x.reset}  ${x.white}Master password${x.reset}     ${x.dim}AES-256 encrypted keystore${x.reset}`,
-    `  ${x.brightCyan}02${x.reset}  ${x.white}Cloud AI providers${x.reset}  ${x.dim}Anthropic, OpenAI, Gemini, Claude Code${x.reset}`,
+    `  ${x.brightCyan}02${x.reset}  ${x.white}Cloud AI providers${x.reset}  ${x.dim}Anthropic, OpenAI, Gemini, DeepSeek, Qwen, +more${x.reset}`,
     `  ${x.brightCyan}03${x.reset}  ${x.white}Bot integrations${x.reset}    ${x.dim}Telegram, Discord, WhatsApp${x.reset}`,
     `  ${x.brightCyan}04${x.reset}  ${x.white}Daemon settings${x.reset}     ${x.dim}Logging, socket config${x.reset}`,
     ``,
@@ -343,12 +343,118 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
   }
   console.log('');
 
+  // ── Chinese AI Providers ────────────────────────────────────────────────
+
+  // DeepSeek
+  console.log(`    ${x.blue}┃${x.reset} ${x.bold}${x.white}DeepSeek${x.reset} ${x.dim}(deepseek-chat, deepseek-reasoner)${x.reset}`);
+  const deepseekIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-...)',
+    'Skip',
+  ], 0);
+  if (deepseekIdx === 0) {
+    const deepseekKey = await askSecret(rl, 'API key (sk-...)');
+    if (deepseekKey) {
+      keys['deepseek_api_key'] = deepseekKey;
+      logSuccess('DeepSeek API key saved');
+    } else {
+      logWarn('DeepSeek skipped');
+    }
+  } else {
+    logWarn('DeepSeek skipped');
+  }
+  console.log('');
+
+  // Zhipu AI / CodeGeeX
+  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}Zhipu AI / CodeGeeX${x.reset} ${x.dim}(GLM-4, CodeGeeX-4)${x.reset}`);
+  const zhipuIdx = await askChoice(rl, 'Authentication method:', [
+    'API key ({id}.{secret} format)',
+    'Skip',
+  ], 0);
+  if (zhipuIdx === 0) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}Get your key at ${x.white}open.bigmodel.cn${x.reset}`);
+    console.log(`      ${x.dim}Key format: ${x.white}xxxxxxxx.xxxxxxxx${x.dim} (id.secret)${x.reset}`);
+    const zhipuKey = await askSecret(rl, 'API key (id.secret)');
+    if (zhipuKey) {
+      keys['zhipu_api_key'] = zhipuKey;
+      logSuccess('Zhipu AI API key saved');
+    } else {
+      logWarn('Zhipu AI skipped');
+    }
+  } else {
+    logWarn('Zhipu AI skipped');
+  }
+  console.log('');
+
+  // Moonshot AI / Kimi
+  console.log(`    ${x.cyan}┃${x.reset} ${x.bold}${x.white}Moonshot AI / Kimi${x.reset} ${x.dim}(moonshot-v1, kimi-k2.5)${x.reset}`);
+  const moonshotIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-...)',
+    'Skip',
+  ], 0);
+  if (moonshotIdx === 0) {
+    const moonshotKey = await askSecret(rl, 'API key (sk-...)');
+    if (moonshotKey) {
+      keys['moonshot_api_key'] = moonshotKey;
+      logSuccess('Moonshot API key saved');
+    } else {
+      logWarn('Moonshot skipped');
+    }
+  } else {
+    logWarn('Moonshot skipped');
+  }
+  console.log('');
+
+  // Alibaba DashScope / Qwen
+  console.log(`    ${x.orange}┃${x.reset} ${x.bold}${x.white}Alibaba DashScope / Qwen${x.reset} ${x.dim}(Tongyi Lingma)${x.reset}`);
+  const dashscopeIdx = await askChoice(rl, 'Authentication method:', [
+    'API key',
+    'Skip',
+  ], 0);
+  if (dashscopeIdx === 0) {
+    const dashscopeKey = await askSecret(rl, 'DashScope API key');
+    if (dashscopeKey) {
+      keys['dashscope_api_key'] = dashscopeKey;
+      logSuccess('DashScope API key saved');
+    } else {
+      logWarn('DashScope skipped');
+    }
+  } else {
+    logWarn('DashScope skipped');
+  }
+  console.log('');
+
+  // Baidu Qianfan / ERNIE
+  console.log(`    ${x.red}┃${x.reset} ${x.bold}${x.white}Baidu Qianfan / ERNIE${x.reset} ${x.dim}(Comate)${x.reset}`);
+  const baiduIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (bce-v3/...)',
+    'Skip',
+  ], 0);
+  if (baiduIdx === 0) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}Get your key at ${x.white}qianfan.baidubce.com${x.reset}`);
+    console.log(`      ${x.dim}Use the OpenAI-compatible API key (not legacy AK/SK)${x.reset}`);
+    const baiduKey = await askSecret(rl, 'Qianfan API key');
+    if (baiduKey) {
+      keys['qianfan_api_key'] = baiduKey;
+      logSuccess('Baidu Qianfan API key saved');
+    } else {
+      logWarn('Baidu skipped');
+    }
+  } else {
+    logWarn('Baidu skipped');
+  }
+  console.log('');
+
   // Default provider
   const configured = [];
   if (keys['anthropic_api_key'] || keys['anthropic_subscription']) configured.push('anthropic');
   if (keys['openai_api_key'] || keys['openai_subscription']) configured.push('openai');
   if (keys['google_ai_api_key'] || keys['gemini_subscription']) configured.push('gemini');
   if (keys['claude_code_enabled']) configured.push('claude_code');
+  if (keys['deepseek_api_key']) configured.push('deepseek');
+  if (keys['zhipu_api_key']) configured.push('zhipu');
+  if (keys['moonshot_api_key']) configured.push('moonshot');
+  if (keys['dashscope_api_key']) configured.push('dashscope');
+  if (keys['qianfan_api_key']) configured.push('baidu');
 
   let defaultProvider = 'anthropic';
   let fallbackProvider = 'openai';
@@ -476,6 +582,41 @@ ${cfg.keys['google_ai_api_key'] ? `      gemini:
 ${cfg.keys['claude_code_enabled'] ? `      claude_code:
         model: "claude-sonnet-4-6"` : `      # claude_code:
       #   model: "claude-sonnet-4-6"`}
+${cfg.keys['deepseek_api_key'] ? `      deepseek:
+        model: "deepseek-chat"
+        key_ref: "deepseek_api_key"
+        base_url: "https://api.deepseek.com"` : `      # deepseek:
+      #   model: "deepseek-chat"
+      #   key_ref: "deepseek_api_key"
+      #   base_url: "https://api.deepseek.com"`}
+${cfg.keys['zhipu_api_key'] ? `      zhipu:
+        model: "glm-4.5-flash"
+        key_ref: "zhipu_api_key"
+        base_url: "https://open.bigmodel.cn/api/paas/v4/"` : `      # zhipu:
+      #   model: "glm-4.5-flash"
+      #   key_ref: "zhipu_api_key"
+      #   base_url: "https://open.bigmodel.cn/api/paas/v4/"`}
+${cfg.keys['moonshot_api_key'] ? `      moonshot:
+        model: "moonshot-v1-auto"
+        key_ref: "moonshot_api_key"
+        base_url: "https://api.moonshot.cn/v1"` : `      # moonshot:
+      #   model: "moonshot-v1-auto"
+      #   key_ref: "moonshot_api_key"
+      #   base_url: "https://api.moonshot.cn/v1"`}
+${cfg.keys['dashscope_api_key'] ? `      dashscope:
+        model: "qwen-plus"
+        key_ref: "dashscope_api_key"
+        base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"` : `      # dashscope:
+      #   model: "qwen-plus"
+      #   key_ref: "dashscope_api_key"
+      #   base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"`}
+${cfg.keys['qianfan_api_key'] ? `      baidu:
+        model: "ernie-4.5"
+        key_ref: "qianfan_api_key"
+        base_url: "https://qianfan.baidubce.com/v2"` : `      # baidu:
+      #   model: "ernie-4.5"
+      #   key_ref: "qianfan_api_key"
+      #   base_url: "https://qianfan.baidubce.com/v2"`}
 
   # Agent Fleet Configuration
   # You can add as many specialized agents as you desire.

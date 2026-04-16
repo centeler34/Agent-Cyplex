@@ -1,8 +1,15 @@
 /**
- * OpenAI adapter — implements ModelClient for the OpenAI API.
+ * DashScope adapter — implements ModelClient for Alibaba's Qwen / Tongyi Lingma API.
  *
- * Models: gpt-4o, gpt-4.1, o3, o4-mini, gpt-4o-mini
- * Docs:   https://platform.openai.com/docs/models
+ * DashScope provides an OpenAI-compatible endpoint for Qwen models.
+ * Defaults to the international endpoint; users in China can override via base_url.
+ *
+ * Regional endpoints:
+ *   International: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+ *   China:         https://dashscope.aliyuncs.com/compatible-mode/v1
+ *
+ * Models: qwen-plus, qwen-max, qwen-turbo, qwen3-coder-plus, qwen3-coder-flash
+ * Docs:   https://www.alibabacloud.com/help/en/model-studio/
  */
 
 import OpenAI from 'openai';
@@ -14,16 +21,18 @@ import type {
   ProviderConfig,
 } from '../types/provider_config.js';
 
-export class OpenAIAdapter implements ModelClient {
-  readonly provider = 'openai';
+const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
+
+export class DashScopeAdapter implements ModelClient {
+  readonly provider = 'dashscope';
   private client: OpenAI;
   private model: string;
 
   constructor(config: ProviderConfig) {
     this.model = config.model;
     this.client = new OpenAI({
-      apiKey: config.key_ref ?? process.env.OPENAI_API_KEY,
-      ...(config.base_url ? { baseURL: config.base_url } : {}),
+      apiKey: config.key_ref ?? process.env.DASHSCOPE_API_KEY,
+      baseURL: config.base_url ?? DEFAULT_BASE_URL,
       timeout: config.timeout_ms,
       maxRetries: config.max_retries,
     });
@@ -101,7 +110,6 @@ export class OpenAIAdapter implements ModelClient {
   }
 
   countTokens(text: string): number {
-    // Approximate token count: ~4 characters per token for English text.
     return Math.ceil(text.length / 4);
   }
 }
