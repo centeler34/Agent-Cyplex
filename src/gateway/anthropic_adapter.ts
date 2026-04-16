@@ -1,5 +1,8 @@
 /**
  * Anthropic Claude adapter — implements ModelClient for the Claude API.
+ *
+ * Models: claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5
+ * Docs:   https://docs.anthropic.com/en/docs/about-claude/models
  */
 
 import Anthropic from '@anthropic-ai/sdk';

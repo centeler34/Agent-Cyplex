@@ -5,7 +5,7 @@
  * Uses a Bearer API key (typically starting with "bce-v3/ALTAK-..."),
  * NOT the legacy AK/SK OAuth flow.
  *
- * Models: ernie-4.5, ernie-4.0-turbo, ernie-x1 (reasoning)
+ * Models: ernie-4.5, ernie-4.0-turbo, ernie-x1 (reasoning), ernie-3.5
  * Docs:   https://cloud.baidu.com/doc/WENXINWORKSHOP/
  */
 

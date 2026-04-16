@@ -8,7 +8,7 @@
  *   International: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
  *   China:         https://dashscope.aliyuncs.com/compatible-mode/v1
  *
- * Models: qwen-plus, qwen3-coder-plus, qwen-max, qwen-turbo
+ * Models: qwen-plus, qwen-max, qwen-turbo, qwen3-coder-plus, qwen3-coder-flash
  * Docs:   https://www.alibabacloud.com/help/en/model-studio/
  */
 

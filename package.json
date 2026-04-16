@@ -54,7 +54,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   },
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   }

@@ -4,7 +4,7 @@
  * Zhipu AI (makers of GLM and CodeGeeX) provides an OpenAI-compatible API.
  * API keys are in {id}.{secret} format (e.g., "abc123.xyz789").
  *
- * Models: glm-4.5-flash (free), glm-4.7-flash (free), codegeex-4, glm-4.7
+ * Models: glm-4.5-flash (free), glm-4.7-flash (free), glm-4.7, codegeex-4, glm-z1-flash (free)
  * Docs:   https://open.bigmodel.cn/
  */
 

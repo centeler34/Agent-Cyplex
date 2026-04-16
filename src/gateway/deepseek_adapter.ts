@@ -4,7 +4,7 @@
  * DeepSeek's API is fully OpenAI-compatible, so this adapter uses
  * the OpenAI SDK with a custom base URL.
  *
- * Models: deepseek-chat (general), deepseek-reasoner (chain-of-thought)
+ * Models: deepseek-chat (V3, general), deepseek-reasoner (R1, chain-of-thought)
  * Docs:   https://api-docs.deepseek.com/
  */
 

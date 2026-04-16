@@ -4,7 +4,7 @@
  * Moonshot AI's API is fully OpenAI-compatible. The moonshot-v1-auto model
  * automatically selects context window size (8k/32k/128k) based on input length.
  *
- * Models: moonshot-v1-auto, kimi-k2.5, moonshot-v1-128k, moonshot-v1-32k
+ * Models: moonshot-v1-auto, kimi-k2.5, moonshot-v1-128k, moonshot-v1-32k, moonshot-v1-8k
  * Docs:   https://platform.moonshot.cn/
  */
 
