@@ -2,11 +2,26 @@
 
 This document outlines the full security architecture of Agent v0, covering all encryption implementations, vulnerability remediations, and defense-in-depth measures across the Rust, TypeScript, and Python layers.
 
-**Current version: v1.10.0** | 43 vulnerabilities patched across 4 security releases.
+**Current version: v1.11.0** | 43 vulnerabilities patched across 5 security releases.
 
 ---
 
 ## 1. Security Release History
+
+### v1.11.0 — Local LLM Provider Support
+
+| Area | Summary |
+|------|---------|
+| New Providers | Added 6 local LLM adapters: Ollama, LM Studio, LocalAI, llama.cpp, vLLM, Jan |
+| Security Model | No API keys stored — local providers use placeholder tokens for OpenAI SDK compatibility |
+| Network Scope | All traffic stays on localhost by default; base_url override is operator-controlled in config.yaml |
+
+**Key changes:**
+- Local LLM adapters use hardcoded localhost base URLs — no SSRF risk from user-supplied input
+- Placeholder API keys (`'ollama'`, `'lm-studio'`, `'sk-no-key-required'`, `'jan'`) are never stored in keystore — they exist only in-memory for SDK initialization
+- Ollama adapter supports `OLLAMA_HOST` env var with `/v1` suffix auto-appending — validated to prevent path traversal
+- Cost tracker returns $0.00 for all local providers (no pricing entry needed)
+- Setup wizard step 3 asks only for base URLs, not secrets — no sensitive data collected for local providers
 
 ### v1.10.0 — Chinese AI Provider Integration
 

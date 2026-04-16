@@ -4,7 +4,7 @@
 
 Agent v0 is a powerful framework for deploying fleets of specialized AI agents. While optimized for security researchers and developers, its modular architecture allows anyone to orchestrate complex, parallel workflows — from creative content creation and data analysis to automated research and technical troubleshooting — all from a single, secure terminal interface.
 
-> **Current version: v1.10.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
+> **Current version: v1.11.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
 
 ---
 
@@ -33,7 +33,8 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
 - **CLI-first** — Full terminal interface with interactive REPL, no GUI required
 - **Neon Architect web dashboard** — Full-featured HTTPS web UI with real-time Socket.IO streaming, AI chat, terminal, task management, memory store, and audit trail
 - **Multi-agent orchestration** — A central "Agentic" orchestrator decomposes tasks, delegates to specialized subordinate agents, and synthesizes results
-- **Model-agnostic** — Route tasks to Anthropic, OpenAI, Gemini, DeepSeek, Zhipu/CodeGeeX, Moonshot/Kimi, Qwen/DashScope, Baidu/ERNIE, or Claude Code CLI
+- **Model-agnostic** — Route tasks to Anthropic, OpenAI, Gemini, DeepSeek, Zhipu/CodeGeeX, Moonshot/Kimi, Qwen/DashScope, Baidu/ERNIE, Claude Code CLI, or local LLMs
+- **Local LLM support** — Run fully offline with Ollama, LM Studio, LocalAI, llama.cpp, vLLM, or Jan — no API keys needed
 - **Subscription-based auth** — Use your existing Claude Pro, ChatGPT Plus, or Gemini Advanced subscription instead of managing API keys
 - **Chinese AI providers** — First-class support for DeepSeek, Zhipu AI (CodeGeeX/GLM), Moonshot AI (Kimi), Alibaba DashScope (Qwen), and Baidu Qianfan (ERNIE)
 - **OS-level sandboxing** — Agents are confined to assigned workspaces using bubblewrap (Linux) or sandbox-exec (macOS)
@@ -193,6 +194,38 @@ Agent v0 implements defense-in-depth security across multiple layers. The core s
 | **Moonshot AI / Kimi** | moonshot-v1-auto, kimi-k2.5, moonshot-v1-128k | API key |
 | **Alibaba DashScope / Qwen** | qwen-plus, qwen3-coder-plus, qwen-max, qwen-turbo | API key |
 | **Baidu Qianfan / ERNIE** | ernie-4.5, ernie-4.0-turbo, ernie-x1 | API key (bce-v3/...) |
+| **Ollama** | llama3.2, codellama, mistral, gemma2, phi3 | None (local) |
+| **LM Studio** | Any loaded GGUF model | None (local) |
+| **LocalAI** | Any compatible model | None (local) |
+| **llama.cpp** | Any GGUF model via llama-server | None (local) |
+| **vLLM** | Any HuggingFace model | None (local) |
+| **Jan** | Any loaded model | None (local) |
+
+### Local LLM Providers
+
+Run AI agents fully offline with local LLM servers. All 6 use OpenAI-compatible APIs — no API keys required:
+
+```yaml
+providers:
+  ollama:
+    model: "llama3.2"                  # or codellama, mistral, gemma2
+    base_url: "http://localhost:11434/v1"
+  lm_studio:
+    model: "default"                   # auto-selects loaded model
+    base_url: "http://localhost:1234/v1"
+  localai:
+    model: "gpt-4"                     # model alias for your GGUF file
+    base_url: "http://localhost:8080/v1"
+  llamacpp:
+    model: "default"                   # serves model loaded at startup
+    base_url: "http://localhost:8080/v1"
+  vllm:
+    model: "default"                   # serves model from: vllm serve <model>
+    base_url: "http://localhost:8000/v1"
+  jan:
+    model: "default"                   # auto-selects loaded model
+    base_url: "http://localhost:1337/v1"
+```
 
 ### Chinese AI Providers
 

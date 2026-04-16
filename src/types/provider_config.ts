@@ -2,7 +2,7 @@
  * Gateway provider configuration types.
  */
 
-export type ProviderType = 'anthropic' | 'openai' | 'gemini' | 'mistral' | 'claude_code' | 'deepseek' | 'zhipu' | 'moonshot' | 'dashscope' | 'baidu';
+export type ProviderType = 'anthropic' | 'openai' | 'gemini' | 'mistral' | 'claude_code' | 'deepseek' | 'zhipu' | 'moonshot' | 'dashscope' | 'baidu' | 'ollama' | 'lm_studio' | 'localai' | 'llamacpp' | 'vllm' | 'jan';
 
 /**
  * Authentication mode for a provider.

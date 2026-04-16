@@ -24,6 +24,12 @@ import { ZhipuAdapter } from './zhipu_adapter.js';
 import { MoonshotAdapter } from './moonshot_adapter.js';
 import { DashScopeAdapter } from './dashscope_adapter.js';
 import { BaiduAdapter } from './baidu_adapter.js';
+import { OllamaAdapter } from './ollama_adapter.js';
+import { LMStudioAdapter } from './lm_studio_adapter.js';
+import { LocalAIAdapter } from './localai_adapter.js';
+import { LlamaCppAdapter } from './llamacpp_adapter.js';
+import { VLLMAdapter } from './vllm_adapter.js';
+import { JanAdapter } from './jan_adapter.js';
 import { RateLimiter } from './rate_limiter.js';
 import { CostTracker, type TokenUsage } from './cost_tracker.js';
 
@@ -243,6 +249,18 @@ export class GatewayRouter {
         return new DashScopeAdapter(config);
       case 'baidu':
         return new BaiduAdapter(config);
+      case 'ollama':
+        return new OllamaAdapter(config);
+      case 'lm_studio':
+        return new LMStudioAdapter(config);
+      case 'localai':
+        return new LocalAIAdapter(config);
+      case 'llamacpp':
+        return new LlamaCppAdapter(config);
+      case 'vllm':
+        return new VLLMAdapter(config);
+      case 'jan':
+        return new JanAdapter(config);
       default:
         throw new Error(`Unsupported provider type: ${config.type}`);
     }

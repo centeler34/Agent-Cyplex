@@ -314,15 +314,25 @@
             <span class="chat-status-dot" id="chatStatusDot"></span>
           </div>
           <select class="model-selector" id="modelSelector">
-            <option value="claude_code">Claude Code (Agent SDK)</option>
-            <option value="anthropic">Anthropic Claude</option>
-            <option value="openai">OpenAI GPT</option>
-            <option value="gemini">Google Gemini</option>
-            <option value="deepseek">DeepSeek</option>
-            <option value="zhipu">Zhipu AI / CodeGeeX</option>
-            <option value="moonshot">Moonshot / Kimi</option>
-            <option value="dashscope">Qwen / DashScope</option>
-            <option value="baidu">Baidu ERNIE</option>
+            <optgroup label="Cloud Providers">
+              <option value="claude_code">Claude Code (Agent SDK)</option>
+              <option value="anthropic">Anthropic Claude</option>
+              <option value="openai">OpenAI GPT</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="zhipu">Zhipu AI / CodeGeeX</option>
+              <option value="moonshot">Moonshot / Kimi</option>
+              <option value="dashscope">Qwen / DashScope</option>
+              <option value="baidu">Baidu ERNIE</option>
+            </optgroup>
+            <optgroup label="Local LLM">
+              <option value="ollama">Ollama</option>
+              <option value="lm_studio">LM Studio</option>
+              <option value="localai">LocalAI</option>
+              <option value="llamacpp">llama.cpp</option>
+              <option value="vllm">vLLM</option>
+              <option value="jan">Jan</option>
+            </optgroup>
           </select>
         </div>
 
