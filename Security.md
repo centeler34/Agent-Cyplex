@@ -2,11 +2,26 @@
 
 This document outlines the full security architecture of Agent v0, covering all encryption implementations, vulnerability remediations, and defense-in-depth measures across the Rust, TypeScript, and Python layers.
 
-**Current version: v1.9.0** | 43 vulnerabilities patched across 4 security releases.
+**Current version: v1.10.0** | 43 vulnerabilities patched across 4 security releases.
 
 ---
 
 ## 1. Security Release History
+
+### v1.10.0 — Chinese AI Provider Integration
+
+| Area | Summary |
+|------|---------|
+| New Providers | Added 5 Chinese AI coding tool adapters: DeepSeek, Zhipu AI (CodeGeeX/GLM), Moonshot AI (Kimi), Alibaba DashScope (Qwen), Baidu Qianfan (ERNIE) |
+| Security Model | All 5 use the existing OpenAI SDK — API keys follow the same encrypted keystore path (AES-256-GCM + Argon2id) |
+| SSRF Prevention | Provider base URLs are hardcoded constants in each adapter, not derived from user input |
+
+**Key changes:**
+- All 5 Chinese provider API keys are stored in the encrypted keystore, never in `.env` or plaintext config
+- Zhipu AI keys (`{id}.{secret}` format) are treated as single opaque strings — no parsing or splitting
+- Baidu Qianfan uses OpenAI-compatible v2 endpoint with Bearer auth — legacy AK/SK OAuth flow is not supported (avoids storing client secrets)
+- DashScope defaults to international endpoint; China endpoint available via `base_url` override (no SSRF risk — override is operator-controlled in config.yaml)
+- Setup wizard validates key format where possible (Zhipu `.` check) and provides clear guidance for each provider
 
 ### v1.9.0 — Web Dashboard Hardening & Subscription Auth
 

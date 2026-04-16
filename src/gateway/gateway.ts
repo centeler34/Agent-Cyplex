@@ -19,6 +19,11 @@ import { GeminiAdapter } from './gemini_adapter.js';
 import { ClaudeCodeAdapter } from './claude_code_adapter.js';
 import { ChatGPTSubscriptionAdapter } from './chatgpt_subscription_adapter.js';
 import { GeminiSubscriptionAdapter } from './gemini_subscription_adapter.js';
+import { DeepSeekAdapter } from './deepseek_adapter.js';
+import { ZhipuAdapter } from './zhipu_adapter.js';
+import { MoonshotAdapter } from './moonshot_adapter.js';
+import { DashScopeAdapter } from './dashscope_adapter.js';
+import { BaiduAdapter } from './baidu_adapter.js';
 import { RateLimiter } from './rate_limiter.js';
 import { CostTracker, type TokenUsage } from './cost_tracker.js';
 
@@ -228,6 +233,16 @@ export class GatewayRouter {
           : new GeminiAdapter(config);
       case 'claude_code':
         return new ClaudeCodeAdapter(config);
+      case 'deepseek':
+        return new DeepSeekAdapter(config);
+      case 'zhipu':
+        return new ZhipuAdapter(config);
+      case 'moonshot':
+        return new MoonshotAdapter(config);
+      case 'dashscope':
+        return new DashScopeAdapter(config);
+      case 'baidu':
+        return new BaiduAdapter(config);
       default:
         throw new Error(`Unsupported provider type: ${config.type}`);
     }

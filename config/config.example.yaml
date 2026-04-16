@@ -47,6 +47,30 @@ agent-v0:
         # No API key needed — uses the ambient Claude Code authentication.
         model: "claude-sonnet-4-6"
 
+      # ── Chinese AI Providers ─────────────────────────────────────────
+      # All use OpenAI-compatible APIs via the openai npm package.
+      # deepseek:
+      #   model: "deepseek-chat"          # or deepseek-reasoner (chain-of-thought)
+      #   key_ref: "deepseek_api_key"
+      #   base_url: "https://api.deepseek.com"
+      # zhipu:
+      #   model: "glm-4.5-flash"          # free; or codegeex-4, glm-4.7, glm-4.7-flash (free)
+      #   key_ref: "zhipu_api_key"        # format: {id}.{secret}
+      #   base_url: "https://open.bigmodel.cn/api/paas/v4/"
+      # moonshot:
+      #   model: "moonshot-v1-auto"        # or kimi-k2.5, moonshot-v1-128k
+      #   key_ref: "moonshot_api_key"
+      #   base_url: "https://api.moonshot.cn/v1"
+      # dashscope:
+      #   model: "qwen-plus"              # or qwen3-coder-plus, qwen-max, qwen-turbo
+      #   key_ref: "dashscope_api_key"
+      #   base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+      #   # China endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1
+      # baidu:
+      #   model: "ernie-4.5"              # or ernie-4.0-turbo, ernie-x1 (reasoning)
+      #   key_ref: "qianfan_api_key"      # OpenAI-compatible key (bce-v3/...), not legacy AK/SK
+      #   base_url: "https://qianfan.baidubce.com/v2"
+
   agents:
     agentic:
       enabled: true

@@ -24,6 +24,11 @@ const COST_PER_1K_TOKENS: Record<string, { prompt: number; completion: number }>
   openai: { prompt: 0.003, completion: 0.006 },
   gemini: { prompt: 0.00025, completion: 0.0005 },
   mistral: { prompt: 0.001, completion: 0.003 },
+  deepseek: { prompt: 0.00028, completion: 0.00042 },
+  zhipu: { prompt: 0.0005, completion: 0.0005 },
+  moonshot: { prompt: 0.0006, completion: 0.0025 },
+  dashscope: { prompt: 0.0004, completion: 0.0012 },
+  baidu: { prompt: 0.0003, completion: 0.0006 },
 };
 
 export class CostTracker {

@@ -4,7 +4,7 @@
 
 Agent v0 is a powerful framework for deploying fleets of specialized AI agents. While optimized for security researchers and developers, its modular architecture allows anyone to orchestrate complex, parallel workflows — from creative content creation and data analysis to automated research and technical troubleshooting — all from a single, secure terminal interface.
 
-> **Current version: v1.9.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
+> **Current version: v1.10.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
 
 ---
 
@@ -33,8 +33,9 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
 - **CLI-first** — Full terminal interface with interactive REPL, no GUI required
 - **Neon Architect web dashboard** — Full-featured HTTPS web UI with real-time Socket.IO streaming, AI chat, terminal, task management, memory store, and audit trail
 - **Multi-agent orchestration** — A central "Agentic" orchestrator decomposes tasks, delegates to specialized subordinate agents, and synthesizes results
-- **Model-agnostic** — Route tasks to Anthropic Claude, OpenAI GPT, Google Gemini, or Claude Code CLI
+- **Model-agnostic** — Route tasks to Anthropic, OpenAI, Gemini, DeepSeek, Zhipu/CodeGeeX, Moonshot/Kimi, Qwen/DashScope, Baidu/ERNIE, or Claude Code CLI
 - **Subscription-based auth** — Use your existing Claude Pro, ChatGPT Plus, or Gemini Advanced subscription instead of managing API keys
+- **Chinese AI providers** — First-class support for DeepSeek, Zhipu AI (CodeGeeX/GLM), Moonshot AI (Kimi), Alibaba DashScope (Qwen), and Baidu Qianfan (ERNIE)
 - **OS-level sandboxing** — Agents are confined to assigned workspaces using bubblewrap (Linux) or sandbox-exec (macOS)
 - **Hash-chained audit logs** — Tamper-evident, append-only SHA-256 chained audit trail for every agent action
 - **Encrypted keystore** — API keys and secrets encrypted at rest with Argon2id key derivation
@@ -101,6 +102,9 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
          (API key)   (API key)  (API key)           (CLI)
               |          |         |                     |
          [subscription mode: session token / gcloud ADC / CLI auth]
+              |          |         |          |          |
+         DeepSeek     Zhipu     Moonshot   DashScope   Baidu
+         (API key)   (API key)  (API key)  (API key)  (API key)
 ```
 
 ### How It Works
@@ -184,6 +188,39 @@ Agent v0 implements defense-in-depth security across multiple layers. The core s
 | **OpenAI** | GPT-4o, GPT-4, GPT-3.5 | API key, Subscription (ChatGPT Plus/Pro session token) |
 | **Google Gemini** | Gemini Pro, Ultra | API key, Subscription (Google ADC via `gcloud auth`) |
 | **Claude Code** | Any Claude model | CLI (ambient subscription auth, no API key needed) |
+| **DeepSeek** | deepseek-chat, deepseek-reasoner | API key |
+| **Zhipu AI / CodeGeeX** | GLM-4.5-Flash (free), GLM-4.7, CodeGeeX-4 | API key ({id}.{secret} format) |
+| **Moonshot AI / Kimi** | moonshot-v1-auto, kimi-k2.5, moonshot-v1-128k | API key |
+| **Alibaba DashScope / Qwen** | qwen-plus, qwen3-coder-plus, qwen-max, qwen-turbo | API key |
+| **Baidu Qianfan / ERNIE** | ernie-4.5, ernie-4.0-turbo, ernie-x1 | API key (bce-v3/...) |
+
+### Chinese AI Providers
+
+All Chinese providers use OpenAI-compatible APIs — no additional SDK dependencies needed:
+
+```yaml
+providers:
+  deepseek:
+    model: "deepseek-chat"           # or deepseek-reasoner
+    key_ref: "deepseek_api_key"
+    base_url: "https://api.deepseek.com"
+  zhipu:
+    model: "glm-4.5-flash"           # free tier; or codegeex-4, glm-4.7
+    key_ref: "zhipu_api_key"
+    base_url: "https://open.bigmodel.cn/api/paas/v4/"
+  moonshot:
+    model: "moonshot-v1-auto"         # auto-selects 8k/32k/128k context
+    key_ref: "moonshot_api_key"
+    base_url: "https://api.moonshot.cn/v1"
+  dashscope:
+    model: "qwen-plus"               # or qwen3-coder-plus, qwen-max
+    key_ref: "dashscope_api_key"
+    base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+  baidu:
+    model: "ernie-4.5"               # or ernie-4.0-turbo, ernie-x1
+    key_ref: "qianfan_api_key"
+    base_url: "https://qianfan.baidubce.com/v2"
+```
 
 ### Subscription-Based Authentication
 
@@ -293,7 +330,7 @@ agent-v0
 On first launch, Agent v0 runs an **interactive setup wizard**:
 
 1. **Master password** — Encrypts all API keys in the keystore
-2. **Cloud AI providers** — Choose between API key or subscription auth for Anthropic, OpenAI, Gemini, and Claude Code
+2. **Cloud AI providers** — Choose between API key or subscription auth for Anthropic, OpenAI, Gemini, Claude Code, DeepSeek, Zhipu AI, Moonshot, DashScope, and Baidu
 3. **Bot integrations** — Telegram, Discord, WhatsApp tokens
 4. **Daemon settings** — Log level, socket path
 
@@ -528,7 +565,7 @@ All incoming messages are normalized, routed through the Agentic orchestrator, a
 Agent-v0/
 +-- src/                    TypeScript core
 |   +-- orchestrator/       Task decomposition & orchestration
-|   +-- gateway/            Multi-provider AI routing + subscription adapters
+|   +-- gateway/            Multi-provider AI routing + subscription + Chinese AI adapters
 |   +-- cli/                CLI entry point, commands, updater, setup wizard
 |   +-- daemon/             Background daemon & IPC
 |   +-- agents/             Specialized agent implementations (9 agents + base)
@@ -565,7 +602,7 @@ Agent-v0/
 |-------|-----------|---------|
 | **Runtime** | Node.js | >= 20.0 |
 | **Language** | TypeScript | 6.0 |
-| **AI SDKs** | @anthropic-ai/sdk, openai, @google/generative-ai | 0.82, 6.33, 0.24 |
+| **AI SDKs** | @anthropic-ai/sdk, openai, @google/generative-ai | 0.82, 6.33, 0.24 (OpenAI SDK reused for DeepSeek, Zhipu, Moonshot, DashScope, Baidu) |
 | **CLI** | Commander.js | 14.0 |
 | **Web** | Express + Socket.IO | 5.2 + 4.8 |
 | **Bots** | grammy, discord.js, baileys | 1.42, 14.26, 7.0 |
