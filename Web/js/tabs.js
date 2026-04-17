@@ -66,11 +66,21 @@ export function renderTabs() {
         : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high border-transparent h-[85%]'
     }`;
 
-    el.innerHTML = `
-      <span class="material-symbols-outlined text-sm ${color}">${icon}</span>
-      <span>${tab.name}${isDirty ? ' *' : ''}</span>
-      <span class="material-symbols-outlined text-[10px] tab-close hover:text-error transition-colors" data-close="${tab.path}">close</span>
-    `;
+    const iconEl = document.createElement('span');
+    iconEl.className = `material-symbols-outlined text-sm ${color}`;
+    iconEl.textContent = icon;
+
+    const nameEl = document.createElement('span');
+    nameEl.textContent = `${tab.name}${isDirty ? ' *' : ''}`;
+
+    const closeEl = document.createElement('span');
+    closeEl.className = 'material-symbols-outlined text-[10px] tab-close hover:text-error transition-colors';
+    closeEl.dataset.close = tab.path;
+    closeEl.textContent = 'close';
+
+    el.appendChild(iconEl);
+    el.appendChild(nameEl);
+    el.appendChild(closeEl);
 
     el.addEventListener('click', () => {
       setActiveTab(tab.path);
@@ -80,7 +90,7 @@ export function renderTabs() {
       bus.emit('filetree:refresh');
     });
 
-    el.querySelector('[data-close]').addEventListener('click', e => closeTab(tab.path, e));
+    closeEl.addEventListener('click', e => closeTab(tab.path, e));
     editorTabs.appendChild(el);
   }
 }
