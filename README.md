@@ -4,7 +4,7 @@
 
 Agent v0 is a powerful framework for deploying fleets of specialized AI agents. While optimized for security researchers and developers, its modular architecture allows anyone to orchestrate complex, parallel workflows — from creative content creation and data analysis to automated research and technical troubleshooting — all from a single, secure terminal interface.
 
-> **Current version: v1.11.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
+> **Current version: v1.12.0** | [Security Architecture](./Security.md) | [Releases](https://github.com/centeler34/Agent-v0/releases)
 
 ---
 
@@ -203,56 +203,290 @@ Agent v0 implements defense-in-depth security across multiple layers. The core s
 
 ### Local LLM Providers
 
-Run AI agents fully offline with local LLM servers. All 6 use OpenAI-compatible APIs — no API keys required:
+Run AI agents **fully offline** with local LLM servers. All 6 use OpenAI-compatible APIs — **no API keys required**, no telemetry, no network egress. Ideal for air-gapped environments, privacy-sensitive work, or avoiding cloud costs.
+
+| Provider | Default Port | Install | Best For |
+|----------|-------------|---------|----------|
+| **Ollama** | 11434 | `curl -fsSL https://ollama.com/install.sh \| sh` | Simplest — auto model management |
+| **LM Studio** | 1234 | [lmstudio.ai](https://lmstudio.ai) GUI | Desktop GUI + easy GGUF browser |
+| **LocalAI** | 8080 | `docker run -p 8080:8080 localai/localai` | Multi-modal (text, audio, vision) |
+| **llama.cpp** | 8080 | `git clone github.com/ggerganov/llama.cpp && make` | Raw speed, CPU/GPU flexibility |
+| **vLLM** | 8000 | `pip install vllm && vllm serve <model>` | High-throughput inference servers |
+| **Jan** | 1337 | [jan.ai](https://jan.ai) GUI | Privacy-first desktop app |
+
+#### Step-by-step: Add Ollama (easiest)
+
+```bash
+# 1. Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 2. Pull a model
+ollama pull llama3.2
+ollama pull codellama       # optional: code-tuned
+
+# 3. Start the server (runs as a background service)
+ollama serve &
+
+# 4. Tell Agent v0 to use it
+agent-v0                    # or re-run the setup wizard
+# → Step 3 (Local LLM Providers) → Configure Ollama
+```
+
+Or add to `~/.agent-v0/config.yaml` directly:
 
 ```yaml
 providers:
   ollama:
-    model: "llama3.2"                  # or codellama, mistral, gemma2
+    type: "ollama"
+    model: "llama3.2"
     base_url: "http://localhost:11434/v1"
+```
+
+#### Step-by-step: Add LM Studio
+
+```bash
+# 1. Download LM Studio from https://lmstudio.ai
+# 2. Open LM Studio → browse + download a GGUF model (e.g. Qwen2.5-Coder-7B)
+# 3. Go to "Developer" tab → enable "Start Server" (port 1234)
+# 4. Add to config:
+```
+
+```yaml
+providers:
   lm_studio:
-    model: "default"                   # auto-selects loaded model
+    type: "lm_studio"
+    model: "default"                   # auto-selects the loaded model
     base_url: "http://localhost:1234/v1"
+```
+
+#### Step-by-step: Add LocalAI (Docker)
+
+```bash
+# 1. Run the all-in-one image (CPU)
+docker run -ti -p 8080:8080 \
+  -v $PWD/models:/build/models \
+  localai/localai:latest-aio-cpu
+
+# 2. Add to config:
+```
+
+```yaml
+providers:
   localai:
-    model: "gpt-4"                     # model alias for your GGUF file
+    type: "localai"
+    model: "gpt-4"                     # LocalAI's default alias
     base_url: "http://localhost:8080/v1"
+```
+
+#### Step-by-step: Add llama.cpp
+
+```bash
+# 1. Build llama.cpp
+git clone https://github.com/ggerganov/llama.cpp && cd llama.cpp && make
+
+# 2. Start the HTTP server
+./llama-server -m /path/to/model.gguf --port 8080
+
+# 3. Note: default port 8080 conflicts with LocalAI.
+#    Change one of them if you run both:
+```
+
+```yaml
+providers:
   llamacpp:
-    model: "default"                   # serves model loaded at startup
-    base_url: "http://localhost:8080/v1"
+    type: "llamacpp"
+    model: "default"
+    base_url: "http://localhost:8081/v1"   # custom port to avoid LocalAI
+```
+
+#### Step-by-step: Add vLLM
+
+```bash
+# 1. Install vLLM (Python 3.9+, CUDA GPU recommended)
+pip install vllm
+
+# 2. Serve a HuggingFace model
+vllm serve meta-llama/Llama-3.2-3B-Instruct --port 8000
+
+# 3. Add to config:
+```
+
+```yaml
+providers:
   vllm:
-    model: "default"                   # serves model from: vllm serve <model>
+    type: "vllm"
+    model: "default"                   # serves whatever 'vllm serve' launched
     base_url: "http://localhost:8000/v1"
+```
+
+#### Step-by-step: Add Jan
+
+```bash
+# 1. Download Jan from https://jan.ai
+# 2. Open Jan → Hub → download a model
+# 3. Settings → "Local API Server" → Enable (port 1337)
+# 4. Add to config:
+```
+
+```yaml
+providers:
   jan:
-    model: "default"                   # auto-selects loaded model
+    type: "jan"
+    model: "default"
     base_url: "http://localhost:1337/v1"
 ```
 
+#### Custom hostnames & environment variables
+
+- **Ollama** honors the `OLLAMA_HOST` env var (e.g. `OLLAMA_HOST=192.168.1.50:11434`). Agent v0 auto-appends `/v1`.
+- All other adapters read `base_url` from config — point them at a remote box by changing the URL:
+
+```yaml
+providers:
+  ollama:
+    type: "ollama"
+    model: "llama3.2"
+    base_url: "http://192.168.1.50:11434/v1"    # remote host
+```
+
+---
+
 ### Chinese AI Providers
 
-All Chinese providers use OpenAI-compatible APIs — no additional SDK dependencies needed:
+All five Chinese providers use OpenAI-compatible APIs — no additional SDK dependencies needed. They are typically **cheaper** than their US counterparts and often have **free tiers** for experimentation.
+
+| Provider | Sign-up URL | Free Tier | Notable Models |
+|----------|-------------|-----------|----------------|
+| **DeepSeek** | [platform.deepseek.com](https://platform.deepseek.com) | Promotional credits | `deepseek-chat`, `deepseek-reasoner` |
+| **Zhipu AI / CodeGeeX** | [open.bigmodel.cn](https://open.bigmodel.cn) | **GLM-4.5-Flash free** | `glm-4.7`, `codegeex-4` |
+| **Moonshot / Kimi** | [platform.moonshot.cn](https://platform.moonshot.cn) | Monthly credit | `moonshot-v1-auto`, `kimi-k2.5` |
+| **Alibaba DashScope / Qwen** | [dashscope.console.aliyun.com](https://dashscope.console.aliyun.com) | 1M tokens/month | `qwen-plus`, `qwen3-coder-plus` |
+| **Baidu Qianfan / ERNIE** | [qianfan.cloud.baidu.com](https://qianfan.cloud.baidu.com) | Trial credits | `ernie-4.5`, `ernie-x1` |
+
+#### Step-by-step: Add DeepSeek
+
+```bash
+# 1. Sign up at https://platform.deepseek.com
+# 2. Create an API key in "API Keys" → copy it (starts with 'sk-')
+# 3. Run the setup wizard:
+agent-v0
+# → Step 2 (Cloud Providers) → DeepSeek → paste API key
+```
+
+Or edit `~/.agent-v0/config.yaml` and import the key via `agent-v0 keys add`:
+
+```bash
+agent-v0 keys add deepseek_api_key
+# paste sk-... when prompted
+```
 
 ```yaml
 providers:
   deepseek:
-    model: "deepseek-chat"           # or deepseek-reasoner
+    type: "deepseek"
+    model: "deepseek-chat"             # or deepseek-reasoner for chain-of-thought
     key_ref: "deepseek_api_key"
     base_url: "https://api.deepseek.com"
+```
+
+#### Step-by-step: Add Zhipu AI / CodeGeeX (free tier available)
+
+```bash
+# 1. Sign up at https://open.bigmodel.cn
+# 2. API Keys → Create new → key format is "{id}.{secret}"
+# 3. Store the full "{id}.{secret}" string:
+agent-v0 keys add zhipu_api_key
+```
+
+```yaml
+providers:
   zhipu:
-    model: "glm-4.5-flash"           # free tier; or codegeex-4, glm-4.7
+    type: "zhipu"
+    model: "glm-4.5-flash"             # FREE tier, great for dev
+    # model: "glm-4.7"                 # production
+    # model: "codegeex-4"              # code-specialized
     key_ref: "zhipu_api_key"
     base_url: "https://open.bigmodel.cn/api/paas/v4/"
+```
+
+#### Step-by-step: Add Moonshot AI / Kimi
+
+```bash
+# 1. Sign up at https://platform.moonshot.cn
+# 2. API Keys → Generate
+# 3. Kimi is excellent for long-context (up to 200k tokens)
+agent-v0 keys add moonshot_api_key
+```
+
+```yaml
+providers:
   moonshot:
-    model: "moonshot-v1-auto"         # auto-selects 8k/32k/128k context
+    type: "moonshot"
+    model: "moonshot-v1-auto"          # auto-routes by prompt length
+    # model: "moonshot-v1-128k"        # force 128k context
+    # model: "kimi-k2.5"               # latest flagship
     key_ref: "moonshot_api_key"
     base_url: "https://api.moonshot.cn/v1"
+```
+
+#### Step-by-step: Add Alibaba DashScope / Qwen
+
+```bash
+# 1. Sign up at https://dashscope.console.aliyun.com (Alibaba Cloud account needed)
+# 2. Activate "Model Studio" → create API key
+# 3. For English/global users, use the international endpoint:
+agent-v0 keys add dashscope_api_key
+```
+
+```yaml
+providers:
   dashscope:
-    model: "qwen-plus"               # or qwen3-coder-plus, qwen-max
+    type: "dashscope"
+    model: "qwen-plus"                 # balanced
+    # model: "qwen3-coder-plus"        # code-specialized
+    # model: "qwen-max"                # highest quality
+    # model: "qwen-turbo"              # fastest / cheapest
     key_ref: "dashscope_api_key"
     base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    # For users in mainland China, use:
+    # base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+```
+
+#### Step-by-step: Add Baidu Qianfan / ERNIE
+
+```bash
+# 1. Sign up at https://qianfan.cloud.baidu.com
+# 2. Console → API Keys → create (format starts with "bce-v3/")
+# 3. Store the full bce-v3/... key:
+agent-v0 keys add qianfan_api_key
+```
+
+```yaml
+providers:
   baidu:
-    model: "ernie-4.5"               # or ernie-4.0-turbo, ernie-x1
+    type: "baidu"
+    model: "ernie-4.5"                 # newest general model
+    # model: "ernie-4.0-turbo"         # faster
+    # model: "ernie-x1"                # reasoning-tuned
     key_ref: "qianfan_api_key"
     base_url: "https://qianfan.baidubce.com/v2"
+```
+
+#### Routing agents to specific providers
+
+Once added, reference any provider from an agent definition:
+
+```yaml
+agents:
+  code_reviewer:
+    provider: "zhipu"                  # use CodeGeeX-4 for code
+    model: "codegeex-4"
+  long_context_research:
+    provider: "moonshot"               # use Kimi for 128k docs
+    model: "moonshot-v1-128k"
+  offline_dev:
+    provider: "ollama"                 # keep sensitive work local
+    model: "llama3.2"
 ```
 
 ### Subscription-Based Authentication
