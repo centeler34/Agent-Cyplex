@@ -28,7 +28,7 @@ banner() {
     echo "|_| |_|\__, |\___|_| |_|\__|   \_/   \___/ "
     echo "       |___/                               "
     echo -e "${NC}"
-    echo -e "${BOLD}Multi-Agent AI Orchestration CLI Terminal${NC}"
+    echo -e "${BOLD}Multi-Agent AI Orchestration — CLI Terminal + Web GUI${NC}"
     echo ""
 }
 
@@ -300,10 +300,31 @@ setup_config() {
     fi
 }
 
+setup_web_gui() {
+    info "Preparing Neon Architect web GUI..."
+    if [ ! -d "$INSTALL_DIR/Web" ]; then
+        warn "Web/ directory missing from install -- skipping GUI setup"
+        return
+    fi
+    if [ ! -f "$INSTALL_DIR/Web/index.html" ]; then
+        warn "Web/index.html missing -- GUI will not work until the repo is updated"
+    fi
+    if [ ! -f "$INSTALL_DIR/Web/server.js" ]; then
+        warn "Web/server.js missing -- cannot launch GUI server"
+        return
+    fi
+    success "Web GUI ready (run 'agent-v0 web' to launch)"
+}
+
 install_command() {
     info "Installing 'agent-v0' command..."
 
-    # Create wrapper script (platform-aware)
+    # Create wrapper script (platform-aware). Routes:
+    #   agent-v0           -> CLI (setup wizard / interactive)
+    #   agent-v0 web       -> launches web GUI on http://127.0.0.1:7777
+    #   agent-v0 web PORT  -> launches web GUI on a custom port
+    #   agent-v0 gui       -> alias for 'web'
+    #   agent-v0 --help    -> prints usage (CLI passes through)
     cat > "$INSTALL_DIR/agent-v0" << 'WRAPPER'
 #!/usr/bin/env bash
 INSTALL_DIR="$HOME/.agent-v0"
@@ -321,6 +342,24 @@ export NVM_DIR="$HOME/.nvm"
 if [ "$(uname -s)" = "Darwin" ]; then
     export PATH="/opt/homebrew/bin:$PATH"
 fi
+
+# Web GUI subcommand
+case "${1:-}" in
+    web|gui)
+        shift
+        WEB_DIR="$INSTALL_DIR/Web"
+        if [ ! -f "$WEB_DIR/server.js" ]; then
+            echo "[x] Web GUI not installed. Run the installer again to fetch Web/."
+            exit 1
+        fi
+        exec node "$WEB_DIR/server.js" "$@"
+        ;;
+    --web-port)
+        # agent-v0 --web-port 8080
+        shift
+        exec node "$INSTALL_DIR/Web/server.js" "${1:-7777}"
+        ;;
+esac
 
 exec node "$INSTALL_DIR/dist/cli/cli.js" "$@"
 WRAPPER
@@ -418,7 +457,7 @@ main() {
     echo ""
 
     # Phase 4: Build everything
-    info "=== Phase 4/7: Build All Components ==="
+    info "=== Phase 4/8: Build All Components ==="
     build_typescript
     build_rust
     build_go
@@ -426,17 +465,22 @@ main() {
     echo ""
 
     # Phase 5: Configuration
-    info "=== Phase 5/7: Configuration ==="
+    info "=== Phase 5/8: Configuration ==="
     setup_config
     echo ""
 
-    # Phase 6: Install command
-    info "=== Phase 6/7: Install Command ==="
+    # Phase 6: Web GUI
+    info "=== Phase 6/8: Web GUI (Neon Architect) ==="
+    setup_web_gui
+    echo ""
+
+    # Phase 7: Install command
+    info "=== Phase 7/8: Install Command ==="
     install_command
     echo ""
 
-    # Phase 7: Platform-specific extras
-    info "=== Phase 7/7: Platform Setup ==="
+    # Phase 8: Platform-specific extras
+    info "=== Phase 8/8: Platform Setup ==="
     setup_launchagent
     echo ""
 
@@ -451,15 +495,21 @@ main() {
         echo -e "  Sandbox:  ${BOLD}bubblewrap (Linux namespaces + seccomp)${NC}"
     fi
     echo ""
-    echo -e "  Run ${BOLD}agent-v0${NC} to launch the setup wizard and configure your API keys."
+    echo -e "  ${BOLD}Two ways to use Agent v0:${NC}"
     echo ""
-    echo -e "  The setup wizard will walk you through:"
+    echo -e "  ${CYAN}[CLI Terminal]${NC}"
+    echo -e "    Run ${BOLD}agent-v0${NC} to launch the setup wizard and configure API keys."
+    echo -e "    Run ${BOLD}agent-v0 daemon start${NC} to start the daemon."
+    echo ""
+    echo -e "  ${CYAN}[Web GUI — Neon Architect]${NC}"
+    echo -e "    Run ${BOLD}agent-v0 web${NC} and open ${BOLD}http://127.0.0.1:7777${NC}"
+    echo -e "    Run ${BOLD}agent-v0 web 8080${NC} to use a custom port."
+    echo ""
+    echo -e "  The setup wizard walks you through:"
     echo -e "    ${CYAN}1.${NC} Master password for encrypted keystore"
-    echo -e "    ${CYAN}2.${NC} AI provider API keys (Anthropic, OpenAI, Gemini)"
+    echo -e "    ${CYAN}2.${NC} AI provider API keys (Anthropic, OpenAI, Gemini, local LLMs)"
     echo -e "    ${CYAN}3.${NC} Bot integrations (Telegram, Discord, WhatsApp)"
     echo -e "    ${CYAN}4.${NC} Daemon & security settings"
-    echo ""
-    echo -e "  After setup, use ${BOLD}agent-v0 daemon start${NC} to start the daemon."
     echo ""
 }
 
