@@ -83,6 +83,14 @@ echo "Creating config directory..."
 mkdir -p ~/.agent-v0/{logs,audit,certs,workspaces,quarantine/{pending,approved,rejected}}
 
 echo ""
+echo "Checking Web GUI..."
+if [ -f "Web/index.html" ] && [ -f "Web/server.js" ]; then
+    echo "  [OK] Neon Architect web GUI available"
+else
+    echo "  [!] Web GUI files missing — run the full installer for GUI support"
+fi
+
+echo ""
 echo "=== Installation complete ==="
 echo "Platform: $OS $ARCH"
 if [ "$PLATFORM" = "macos" ]; then
@@ -90,4 +98,6 @@ if [ "$PLATFORM" = "macos" ]; then
 else
     echo "Sandbox: bubblewrap (Linux namespaces + seccomp)"
 fi
-echo "Run 'agent-v0 daemon start' to begin."
+echo ""
+echo "CLI:    Run 'agent-v0 daemon start' to launch the daemon."
+echo "GUI:    Run 'node Web/server.js' then open http://127.0.0.1:7777"
