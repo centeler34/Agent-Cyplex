@@ -1331,8 +1331,9 @@ terminalInput.addEventListener('keydown', e => {
     const output = processCommand(cmd);
     if (output) {
       const outLine = document.createElement('div');
-      outLine.className = 'terminal-line';
-      outLine.innerHTML = output;
+      outLine.className = 'terminal-line terminal-output';
+      outLine.style.whiteSpace = 'pre-wrap';
+      outLine.textContent = output;
       terminalOutput.appendChild(outLine);
     }
 
@@ -1346,35 +1347,35 @@ function processCommand(cmd) {
 
   switch (command) {
     case 'help':
-      return `<span class="terminal-output">Available commands: help, ls, cat, pwd, clear, echo, date, whoami, tree</span>`;
+      return 'Available commands: help, ls, cat, pwd, clear, echo, date, whoami, tree';
     case 'ls': {
       const path = parts[1] || '';
       const node = path ? getNode(path) : fileSystem;
-      if (!node || node._type === 'file') return `<span class="terminal-error">ls: cannot access '${path}': No such directory</span>`;
+      if (!node || node._type === 'file') return `ls: cannot access '${path}': No such directory`;
       const entries = Object.keys(node).filter(k => !k.startsWith('_'));
-      return `<span class="terminal-output">${entries.map(e => {
+      return entries.map(e => {
         const child = node[e];
-        return child._type === 'dir' ? `<span class="text-primary font-bold">${e}/</span>` : e;
-      }).join('  ')}</span>`;
+        return child._type === 'dir' ? `${e}/` : e;
+      }).join('  ');
     }
     case 'cat': {
       const path = parts[1];
-      if (!path) return `<span class="terminal-error">cat: missing operand</span>`;
+      if (!path) return 'cat: missing operand';
       const content = getFileContent(path);
-      if (content === '' && !getNode(path)) return `<span class="terminal-error">cat: ${path}: No such file</span>`;
-      return `<span class="terminal-output">${escapeHtml(content).replace(/\n/g, '<br/>')}</span>`;
+      if (content === '' && !getNode(path)) return `cat: ${path}: No such file`;
+      return content;
     }
     case 'pwd':
-      return `<span class="terminal-output">/workspace</span>`;
+      return '/workspace';
     case 'clear':
       clearTerminal();
       return '';
     case 'echo':
-      return `<span class="terminal-output">${escapeHtml(parts.slice(1).join(' '))}</span>`;
+      return parts.slice(1).join(' ');
     case 'date':
-      return `<span class="terminal-output">${new Date().toString()}</span>`;
+      return new Date().toString();
     case 'whoami':
-      return `<span class="terminal-output">architect</span>`;
+      return 'architect';
     case 'tree': {
       let result = '';
       function walk(node, prefix, isLast) {
@@ -1383,15 +1384,15 @@ function processCommand(cmd) {
           const last = idx === entries.length - 1;
           const connector = last ? '└── ' : '├── ';
           const isDir = child._type === 'dir';
-          result += prefix + connector + (isDir ? `<span class="text-primary">${name}/</span>` : name) + '\n';
+          result += prefix + connector + (isDir ? `${name}/` : name) + '\n';
           if (isDir) walk(child, prefix + (last ? '    ' : '│   '), last);
         });
       }
       walk(fileSystem, '', true);
-      return `<span class="terminal-output" style="white-space:pre">${result}</span>`;
+      return result;
     }
     default:
-      return `<span class="terminal-error">command not found: ${escapeHtml(command)}</span>`;
+      return `command not found: ${command}`;
   }
 }
 
