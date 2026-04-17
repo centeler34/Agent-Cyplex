@@ -1334,6 +1334,7 @@ terminalInput.addEventListener('keydown', e => {
       outLine.className = 'terminal-line terminal-output';
       outLine.style.whiteSpace = 'pre-wrap';
       outLine.textContent = output;
+      outLine.textContent = output;
       terminalOutput.appendChild(outLine);
     }
 
@@ -1346,35 +1347,35 @@ function processCommand(cmd) {
   const command = parts[0];
 
   switch (command) {
-    case 'help':
+      return `Available commands: help, ls, cat, pwd, clear, echo, date, whoami, tree`;
       return 'Available commands: help, ls, cat, pwd, clear, echo, date, whoami, tree';
     case 'ls': {
       const path = parts[1] || '';
-      const node = path ? getNode(path) : fileSystem;
       if (!node || node._type === 'file') return `ls: cannot access '${path}': No such directory`;
-      const entries = Object.keys(node).filter(k => !k.startsWith('_'));
+      if (!node || node._type === 'file') return `ls: cannot access '${path}': No such directory`;
+      return `${entries.map(e => {
       return entries.map(e => {
-        const child = node[e];
         return child._type === 'dir' ? `${e}/` : e;
+      }).join('  ')}`;
       }).join('  ');
     }
     case 'cat': {
-      const path = parts[1];
+      if (!path) return `cat: missing operand`;
       if (!path) return 'cat: missing operand';
-      const content = getFileContent(path);
       if (content === '' && !getNode(path)) return `cat: ${path}: No such file`;
       return content;
+      return content;
     }
-    case 'pwd':
+      return `/workspace`;
       return '/workspace';
     case 'clear':
       clearTerminal();
       return '';
-    case 'echo':
       return parts.slice(1).join(' ');
-    case 'date':
+      return parts.slice(1).join(' ');
+      return `${new Date().toString()}`;
       return new Date().toString();
-    case 'whoami':
+      return `architect`;
       return 'architect';
     case 'tree': {
       let result = '';
@@ -1383,15 +1384,15 @@ function processCommand(cmd) {
         entries.forEach(([name, child], idx) => {
           const last = idx === entries.length - 1;
           const connector = last ? '└── ' : '├── ';
-          const isDir = child._type === 'dir';
+          result += prefix + connector + (isDir ? `${name}/` : name) + '\n';
           result += prefix + connector + (isDir ? `${name}/` : name) + '\n';
           if (isDir) walk(child, prefix + (last ? '    ' : '│   '), last);
         });
       }
-      walk(fileSystem, '', true);
+      return result;
       return result;
     }
-    default:
+      return `command not found: ${command}`;
       return `command not found: ${command}`;
   }
 }
