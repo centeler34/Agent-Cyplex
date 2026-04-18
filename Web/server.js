@@ -116,17 +116,29 @@ function handler(req, res) {
         return sendStatus(res, 403, 'Forbidden');
       }
 
-      fs.readFile(realFilePath, (err, data) => {
-        if (err) return sendStatus(res, 500, 'Server error');
-        const type = MIME[ext];
-        res.writeHead(200, {
-          'Content-Type': type,
-          'Cache-Control': 'no-cache',
-          'X-Content-Type-Options': 'nosniff',
-          'Referrer-Policy': 'no-referrer',
+      fs.open(realFilePath, 'r', (err, fd) => {
+        if (err) return sendStatus(res, 404, 'Not Found');
+
+        fs.fstat(fd, (err, st) => {
+          if (err || !st.isFile()) {
+            fs.close(fd, () => {});
+            return sendStatus(res, 404, 'Not Found');
+          }
+
+          fs.readFile(fd, (err, data) => {
+            fs.close(fd, () => {});
+            if (err) return sendStatus(res, 500, 'Server error');
+            const type = MIME[ext];
+            res.writeHead(200, {
+              'Content-Type': type,
+              'Cache-Control': 'no-cache',
+              'X-Content-Type-Options': 'nosniff',
+              'Referrer-Policy': 'no-referrer',
+            });
+            if (req.method === 'HEAD') return res.end();
+            res.end(data);
+          });
         });
-        if (req.method === 'HEAD') return res.end();
-        res.end(data);
       });
     });
   });
