@@ -42,6 +42,19 @@ brew install agent-v0
 | `agent-v0 web 8080` | Web GUI on a custom port |
 | `agent-v0 gui` | Alias for `web` |
 
+## Supported AI providers (after install)
+
+Once installed, `agent-v0` can route tasks to any of the following providers. The **Chinese** and **Local LLM** groups are **independent services — they are not OpenAI products**. Agent v0 only reuses the `openai` npm client as an HTTP transport because these services happen to share OpenAI's chat-completions wire schema; the actual endpoints, credentials, and pricing are entirely controlled by each vendor / local binary.
+
+| Group | Providers | Notes |
+|-------|-----------|-------|
+| Cloud (US) | Anthropic Claude, OpenAI GPT, Google Gemini | first-party SDKs |
+| Cloud (China) | DeepSeek, Zhipu / CodeGeeX, Moonshot / Kimi, Alibaba DashScope / Qwen, Baidu Qianfan / ERNIE | independent Chinese companies, own API keys, own pricing |
+| Local / offline | Ollama, LM Studio, llama.cpp, vLLM, Jan, LocalAI | open-source projects, run on your machine, no API keys |
+| Subscription | Claude Code CLI, ChatGPT Plus/Pro, Gemini Advanced | session-token auth instead of API keys |
+
+Pick and configure providers at first launch with the built-in setup wizard (`agent-v0` → "Configure providers").
+
 ## Uninstall
 
 ```bash

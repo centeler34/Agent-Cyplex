@@ -42,7 +42,7 @@ const MIME = {
 function safeResolve(urlPath) {
   const decoded = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
   const resolved = path.normalize(path.join(ROOT, decoded));
-  if (!resolved.startsWith(ROOT)) return null;
+  if (resolved !== ROOT && !resolved.startsWith(ROOT + path.sep)) return null;
   return resolved;
 }
 

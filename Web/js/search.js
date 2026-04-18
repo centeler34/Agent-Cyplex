@@ -60,14 +60,14 @@ export function runSearch(query) {
         <div class="search-matches">
     `;
     for (const m of matches) {
-      const highlighted = escapeHtml(m.line).replace(
+      const highlighted = escapeHtml(m.text).replace(
         new RegExp(escapeRegex(query), 'gi'),
-        match => `<mark class="bg-primary/30 text-on-surface">${match}</mark>`
+        match => `<mark class="bg-primary/30 text-on-surface">${escapeHtml(match)}</mark>`
       );
       html += `
         <div class="search-result px-3 py-1.5 pl-9 text-xs cursor-pointer hover:bg-surface-container-high flex gap-2"
-             data-path="${escapeHtml(path)}" data-name="${escapeHtml(name)}" data-line="${m.lineNumber}">
-          <span class="text-on-surface-variant w-8 text-right shrink-0">${m.lineNumber}</span>
+             data-path="${escapeHtml(path)}" data-name="${escapeHtml(name)}" data-line="${m.line}">
+          <span class="text-on-surface-variant w-8 text-right shrink-0">${m.line}</span>
           <span class="text-on-surface truncate">${highlighted}</span>
         </div>
       `;

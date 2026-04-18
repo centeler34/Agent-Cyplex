@@ -208,7 +208,7 @@ Agent v0 implements defense-in-depth security across multiple layers. The core s
 
 ### Local LLM Providers
 
-Run AI agents **fully offline** with local LLM servers. All 6 use OpenAI-compatible APIs — **no API keys required**, no telemetry, no network egress. Ideal for air-gapped environments, privacy-sensitive work, or avoiding cloud costs.
+Run AI agents **fully offline** with local LLM servers. All 6 tools (Ollama, LM Studio, llama.cpp, vLLM, Jan, LocalAI) are **independent open-source projects** — they are not OpenAI products. They simply expose an HTTP endpoint whose request/response shape matches OpenAI's chat-completions schema, so Agent v0 can reuse the same `openai` client as a transport pointed at `http://localhost`. **No API keys required**, no telemetry, no network egress. Ideal for air-gapped environments, privacy-sensitive work, or avoiding cloud costs.
 
 | Provider | Default Port | Install | Best For |
 |----------|-------------|---------|----------|
@@ -358,7 +358,7 @@ providers:
 
 ### Chinese AI Providers
 
-All five Chinese providers use OpenAI-compatible APIs — no additional SDK dependencies needed. They are typically **cheaper** than their US counterparts and often have **free tiers** for experimentation.
+All five Chinese providers are **independent Chinese AI companies** (DeepSeek, Zhipu, Moonshot, Alibaba, Baidu) — they are **not affiliated with OpenAI**. Their HTTP APIs simply implement the same request/response schema as OpenAI's chat-completions endpoint, which is an open industry convention. Because of that schema compatibility, Agent v0 reuses the `openai` npm client as a transport only, pointed at each provider's own base URL (e.g. `api.deepseek.com`, `open.bigmodel.cn`, `dashscope.aliyuncs.com`). No additional SDK dependencies are needed. They are typically **cheaper** than their US counterparts and often have **free tiers** for experimentation.
 
 | Provider | Sign-up URL | Free Tier | Notable Models |
 |----------|-------------|-----------|----------------|
@@ -951,7 +951,7 @@ Agent-v0/
 |-------|-----------|---------|
 | **Runtime** | Node.js | >= 20.0 |
 | **Language** | TypeScript | 6.0 |
-| **AI SDKs** | @anthropic-ai/sdk, openai, @google/generative-ai | 0.82, 6.33, 0.24 (OpenAI SDK reused for DeepSeek, Zhipu, Moonshot, DashScope, Baidu) |
+| **AI SDKs** | @anthropic-ai/sdk, openai, @google/generative-ai | 0.82, 6.33, 0.24 (the `openai` client is reused as an HTTP transport for DeepSeek, Zhipu, Moonshot, DashScope, and Baidu — those services are independent Chinese providers whose APIs share OpenAI's wire schema, not OpenAI products) |
 | **CLI** | Commander.js | 14.0 |
 | **Web** | Express + Socket.IO | 5.2 + 4.8 |
 | **Bots** | grammy, discord.js, baileys | 1.42, 14.26, 7.0 |
