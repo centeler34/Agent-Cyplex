@@ -1,10 +1,6 @@
 {
   "name": "agent-v0",
-<<<<<<< HEAD
-  "version": "1.12.5",
-=======
-  "version": "1.12.6",
->>>>>>> 7afcde9 (Fix 11 pre-existing tsc --noEmit errors (v1.12.6))
+  "version": "1.12.7",
   "repository": {
     "type": "git",
     "url": "https://github.com/centeler34/Agent-v0.git"
