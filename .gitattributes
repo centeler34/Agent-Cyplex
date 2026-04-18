@@ -1,0 +1,16 @@
+# GitHub Linguist overrides
+# https://github.com/github-linguist/linguist/blob/main/docs/overrides.md
+#
+# The only Ruby in this repo is the Homebrew formula shipped for
+# distribution. It is not application code and should not drive
+# language detection, CodeQL default-setup matrix selection, or
+# the repo's language bar. Marking the directory vendored tells
+# Linguist to skip it for all of those purposes.
+Formula/**        linguist-vendored
+Formula/*.rb      linguist-vendored
+Formula/*.rb      linguist-language=Ruby
+
+# Also exclude generated / third-party trees from language stats.
+node_modules/**   linguist-vendored
+dist/**           linguist-generated
+target/**         linguist-generated
