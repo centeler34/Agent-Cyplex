@@ -15,6 +15,11 @@ Agent v0 is a powerful framework for deploying fleets of specialized AI agents. 
 - [Security Implementation](#security-implementation)
 - [Supported AI Providers](#supported-ai-providers)
 - [Installation](#installation)
+  - [Quick Install (Linux + macOS)](#quick-install-linux--macos)
+  - [macOS Quick Start](#macos-quick-start)
+  - [Homebrew (macOS + Linux)](#homebrew-macos--linux)
+  - [Manual Install](#manual-install)
+  - [Platform Differences](#platform-differences)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Web Dashboard](#web-dashboard)
@@ -542,6 +547,83 @@ cd go/net-probe && go build -o ../../dist/go/net-probe . && cd ../..
 npm link
 agent-v0
 ```
+
+### Homebrew (macOS + Linux)
+
+Agent v0 ships a Homebrew formula under [`Formula/agent-v0.rb`](./Formula/agent-v0.rb). It works on **macOS** (Intel + Apple Silicon) and **Linux** (via [Linuxbrew](https://docs.brew.sh/Homebrew-on-Linux)).
+
+#### One-line install (via tap)
+
+```bash
+brew tap centeler34/agent-v0 https://github.com/centeler34/Agent-v0.git
+brew install agent-v0
+```
+
+Want the latest `main` branch instead of the tagged release?
+
+```bash
+brew install --HEAD agent-v0
+```
+
+#### Install from a local clone
+
+If you already cloned the repo (or downloaded a release tarball):
+
+```bash
+git clone https://github.com/centeler34/Agent-v0.git
+cd Agent-v0
+brew install --build-from-source ./Formula/agent-v0.rb
+```
+
+#### What Homebrew installs for you
+
+Homebrew auto-pulls every dependency the build needs:
+
+- `node` (≥ 20) — runtime
+- `rust` — build-time (Rust security crates)
+- `go` — build-time (Go net-probe utility)
+- `python@3.12` — forensics & OSINT scripts
+- `openssl@3` — TLS and crypto primitives
+- `bubblewrap` — **Linux only** (sandboxing)
+
+macOS uses the built-in `sandbox-exec` instead of bubblewrap.
+
+#### After install
+
+The formula installs one wrapper binary with three entry points:
+
+```bash
+agent-v0                 # CLI terminal + interactive setup wizard
+agent-v0 daemon start    # start the background daemon
+agent-v0 web             # Web GUI (Neon Architect) on http://127.0.0.1:7777
+agent-v0 web 8080        # Web GUI on a custom port
+agent-v0 gui             # alias for 'web'
+```
+
+#### Updating
+
+```bash
+brew update
+brew upgrade agent-v0
+```
+
+#### Uninstalling
+
+```bash
+brew uninstall agent-v0
+brew untap   centeler34/agent-v0          # remove the tap (optional)
+rm -rf ~/.agent-v0 ~/.cyplex              # remove config + keystore (optional)
+```
+
+#### Troubleshooting
+
+- **Build fails** — run with verbose output: `brew install --verbose --build-from-source ./Formula/agent-v0.rb`
+- **Port 7777 already in use** — `agent-v0 web 8123` (or any free port)
+- **Slow first install on Apple Silicon** — expected; Rust and Go compile from source. Subsequent upgrades are fast (Homebrew caches artifacts).
+- **`command not found: agent-v0`** — make sure Homebrew's bin directory is on your `PATH`:
+  - macOS Apple Silicon: `/opt/homebrew/bin`
+  - macOS Intel: `/usr/local/bin`
+  - Linuxbrew: `/home/linuxbrew/.linuxbrew/bin`
 
 ### Manual Install
 
