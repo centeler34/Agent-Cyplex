@@ -162,7 +162,7 @@ io.on('connection', (socket: import('socket.io').Socket) => {
           client.write(Buffer.concat([lenBuf, Buffer.from(statusMsg)]));
         });
 
-        client.on('data', (data) => {
+        client.on('data', (data: Buffer) => {
           try {
             const response = JSON.parse(data.subarray(4).toString());
             socket.emit('auth_success', {
@@ -207,7 +207,7 @@ io.on('connection', (socket: import('socket.io').Socket) => {
       client.write(Buffer.concat([lenBuf, Buffer.from(statusMsg)]));
     });
 
-    client.on('data', (data) => {
+    client.on('data', (data: Buffer) => {
       try {
         const response = JSON.parse(data.subarray(4).toString());
         socket.emit('status_update', {
@@ -323,7 +323,7 @@ io.on('connection', (socket: import('socket.io').Socket) => {
     });
 
     let buffer = Buffer.alloc(0);
-    client.on('data', (chunk) => {
+    client.on('data', (chunk: Buffer) => {
       buffer = Buffer.concat([buffer, chunk]);
 
       while (buffer.length >= 4) {
@@ -402,7 +402,7 @@ io.on('connection', (socket: import('socket.io').Socket) => {
     });
 
     let chatBuffer = Buffer.alloc(0);
-    client.on('data', (chunk) => {
+    client.on('data', (chunk: Buffer) => {
       chatBuffer = Buffer.concat([chatBuffer, chunk]);
 
       while (chatBuffer.length >= 4) {

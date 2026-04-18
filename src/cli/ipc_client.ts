@@ -27,7 +27,7 @@ export async function sendIpcMessage(
 
     let buffer = Buffer.alloc(0);
 
-    client.on('data', (data) => {
+    client.on('data', (data: Buffer) => {
       buffer = Buffer.concat([buffer, data]);
 
       if (buffer.length >= 4) {

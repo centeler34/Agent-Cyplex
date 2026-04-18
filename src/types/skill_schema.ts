@@ -22,7 +22,7 @@ export const SkillStepSchema = z.object({
   name: z.string(),
   instruction: z.string().optional(),
   invoke_skill: z.string().optional(),
-  inputs: z.record(z.unknown()).optional(),
+  inputs: z.record(z.string(), z.unknown()).optional(),
   requires_key: z.string().optional(),
 });
 

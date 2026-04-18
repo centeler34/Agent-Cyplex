@@ -161,7 +161,7 @@ export class AgentV0Daemon {
     this.connections.add(socket);
     let buffer = Buffer.alloc(0);
 
-    socket.on('data', (data) => {
+    socket.on('data', (data: Buffer) => {
       buffer = Buffer.concat([buffer, data]);
 
       // Length-prefixed protocol: 4 bytes (big-endian) + JSON payload
