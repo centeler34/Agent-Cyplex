@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
+const ROOT_REAL = fs.realpathSync(ROOT);
 
 const PORT = parseInt(process.argv[2] || process.env.PORT || '7777', 10);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -44,10 +45,32 @@ const MIME = {
 const ALLOWED_EXT = new Set(Object.keys(MIME));
 
 function safeResolve(urlPath) {
-  const decoded = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
-  const resolved = path.normalize(path.join(ROOT, decoded));
-  if (resolved !== ROOT && !resolved.startsWith(ROOT + path.sep)) return null;
-  return resolved;
+  let decoded;
+  try {
+    decoded = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
+  } catch {
+    return null;
+  }
+
+  const candidate = path.resolve(ROOT_REAL, '.' + decoded);
+  const inRoot = (p) => p === ROOT_REAL || p.startsWith(ROOT_REAL + path.sep);
+  if (!inRoot(candidate)) return null;
+
+  try {
+    const real = fs.realpathSync.native ? fs.realpathSync.native(candidate) : fs.realpathSync(candidate);
+    return inRoot(real) ? real : null;
+  } catch (err) {
+    if (!err || err.code !== 'ENOENT') return null;
+    const parent = path.dirname(candidate);
+    try {
+      const realParent = fs.realpathSync.native ? fs.realpathSync.native(parent) : fs.realpathSync(parent);
+      if (!inRoot(realParent)) return null;
+      const rebuilt = path.join(realParent, path.basename(candidate));
+      return inRoot(rebuilt) ? rebuilt : null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Token-bucket rate limiter keyed by remote IP. Bound to loopback by default,
@@ -104,17 +127,36 @@ function handler(req, res) {
     const ext = path.extname(filePath).toLowerCase();
     if (!ALLOWED_EXT.has(ext)) return sendStatus(res, 404, 'Not Found');
 
-    fs.readFile(filePath, (err, data) => {
-      if (err) return sendStatus(res, 500, 'Server error');
-      const type = MIME[ext];
-      res.writeHead(200, {
-        'Content-Type': type,
-        'Cache-Control': 'no-cache',
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'no-referrer',
+    fs.realpath(filePath, (err, realFilePath) => {
+      if (err) return sendStatus(res, 404, 'Not Found');
+      if (realFilePath !== ROOT_REAL && !realFilePath.startsWith(ROOT_REAL + path.sep)) {
+        return sendStatus(res, 403, 'Forbidden');
+      }
+
+      fs.open(realFilePath, 'r', (err, fd) => {
+        if (err) return sendStatus(res, 404, 'Not Found');
+
+        fs.fstat(fd, (err, st) => {
+          if (err || !st.isFile()) {
+            fs.close(fd, () => {});
+            return sendStatus(res, 404, 'Not Found');
+          }
+
+          fs.readFile(fd, (err, data) => {
+            fs.close(fd, () => {});
+            if (err) return sendStatus(res, 500, 'Server error');
+            const type = MIME[ext];
+            res.writeHead(200, {
+              'Content-Type': type,
+              'Cache-Control': 'no-cache',
+              'X-Content-Type-Options': 'nosniff',
+              'Referrer-Policy': 'no-referrer',
+            });
+            if (req.method === 'HEAD') return res.end();
+            res.end(data);
+          });
+        });
       });
-      if (req.method === 'HEAD') return res.end();
-      res.end(data);
     });
   });
 }
