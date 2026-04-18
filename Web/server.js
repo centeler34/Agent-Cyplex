@@ -51,9 +51,26 @@ function safeResolve(urlPath) {
   } catch {
     return null;
   }
-  const resolved = path.normalize(path.join(ROOT, decoded));
-  if (resolved !== ROOT && !resolved.startsWith(ROOT + path.sep)) return null;
-  return resolved;
+
+  const candidate = path.resolve(ROOT_REAL, '.' + decoded);
+  const inRoot = (p) => p === ROOT_REAL || p.startsWith(ROOT_REAL + path.sep);
+  if (!inRoot(candidate)) return null;
+
+  try {
+    const real = fs.realpathSync.native ? fs.realpathSync.native(candidate) : fs.realpathSync(candidate);
+    return inRoot(real) ? real : null;
+  } catch (err) {
+    if (!err || err.code !== 'ENOENT') return null;
+    const parent = path.dirname(candidate);
+    try {
+      const realParent = fs.realpathSync.native ? fs.realpathSync.native(parent) : fs.realpathSync(parent);
+      if (!inRoot(realParent)) return null;
+      const rebuilt = path.join(realParent, path.basename(candidate));
+      return inRoot(rebuilt) ? rebuilt : null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Token-bucket rate limiter keyed by remote IP. Bound to loopback by default,
