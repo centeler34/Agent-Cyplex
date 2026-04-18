@@ -185,7 +185,7 @@ if (HTTPS_KEY && HTTPS_CERT) {
   );
   scheme = 'https';
 } else {
-  // deepcode ignore HttpToHttps: loopback-only dev server for serving the static Web/ bundle to the user's own browser (ES modules break over file://). The LOOPBACK_HOSTS guard above refuses to bind cleartext HTTP on any non-loopback host. Set HTTPS_KEY/HTTPS_CERT to enable TLS for LAN use.
+  // deepcode ignore HttpToHttps: loopback-only dev server for serving the static Web/ bundle to the user's own browser (ES modules break over file://). The LOOPBACK_HOSTS guard at startup refuses to bind cleartext HTTP on any non-loopback host. Set HTTPS_KEY/HTTPS_CERT to enable TLS for LAN use.
   server = http.createServer(handler);
 }
 
