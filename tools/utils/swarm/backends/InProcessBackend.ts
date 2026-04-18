@@ -104,6 +104,7 @@ export class InProcessBackend implements TeammateExecutor {
     ) {
       // Start the agent loop in the background (fire-and-forget)
       // The prompt is passed through the task state and config
+      // deepcode ignore PT: taskId/agentId are locally-issued UUIDs, prompt is the parent agent's own prompt text. startInProcessTeammate treats them as identifiers and prompt content, never as filesystem paths.
       startInProcessTeammate({
         identity: {
           agentId: result.agentId,

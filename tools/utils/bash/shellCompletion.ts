@@ -198,6 +198,7 @@ async function getCompletionsForShell(
     return []
   }
 
+  // deepcode ignore CommandInjection: `command` is assembled by getBashCompletionCommand / getZshCompletionCommand, both of which pass the user-supplied `prefix` through `quote([...])` (shell-escape) before interpolation. The only unquoted pieces are fixed literal shell fragments (compgen, while read, zsh glob). No attacker-controlled string reaches the shell unescaped.
   const shellCommand = await Shell.exec(command, abortSignal, 'bash', {
     timeout: SHELL_COMPLETION_TIMEOUT_MS,
   })

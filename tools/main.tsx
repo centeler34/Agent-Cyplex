@@ -3484,6 +3484,7 @@ async function run(): Promise<CommanderCommand> {
         // Pre-filter commands to only include remote-safe ones.
         // CCR's init response may further refine the list (via handleRemoteInit in REPL).
         const remoteCommands = filterCommandsForRemoteMode(commands);
+        // deepcode ignore DOMXSS: launchRepl renders via Ink (terminal text frames), not a browser DOM. There is no HTML sink, no innerHTML, no document.* — the "DOM XSS" model does not apply to a terminal UI.
         await launchRepl(root, {
           getFpsMetrics,
           stats,

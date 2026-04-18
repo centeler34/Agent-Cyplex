@@ -138,6 +138,7 @@ export class SessionsWebSocket {
         this.callbacks.onConnected?.()
       })
 
+      // deepcode ignore InsufficientPostmessageValidation: this is a Node WebSocket 'message' event, not window.postMessage. There is no cross-origin context. Authentication is enforced at the HTTP upgrade layer (headers in createWebSocket above), and handleMessage validates message schema before acting.
       ws.addEventListener('message', (event: MessageEvent) => {
         const data =
           typeof event.data === 'string' ? event.data : String(event.data)

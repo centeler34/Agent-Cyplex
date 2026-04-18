@@ -380,6 +380,7 @@ function createInProcessCanUseTool(
       })
 
       // Send request to leader's mailbox
+      // deepcode ignore PT: `request` is a structured permission-request object built locally (tool name, input, request id). sendPermissionRequestViaMailbox serializes it and delivers via the mailbox abstraction — not a filesystem path sink.
       void sendPermissionRequestViaMailbox(request)
 
       // Poll teammate's mailbox for the response

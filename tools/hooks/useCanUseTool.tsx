@@ -110,6 +110,7 @@ function useCanUseTool(setToolUseConfirmQueue, setToolPermissionContext) {
               if (ctx.resolveIfAborted(resolve)) {
                 return;
               }
+              // deepcode ignore PT: `description` is a UI-side label for a tool permission prompt, not a filesystem path. handleSwarmWorkerPermission renders it, it never reaches fs.
               const swarmDecision = await handleSwarmWorkerPermission({
                 ctx,
                 description,

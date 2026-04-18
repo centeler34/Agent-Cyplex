@@ -61,6 +61,7 @@ export class DirectConnectSessionManager {
       this.callbacks.onConnected?.()
     })
 
+    // deepcode ignore InsufficientPostmessageValidation: this is a Node WebSocket 'message' event, not window.postMessage — no cross-origin semantics apply. Authentication is enforced at the HTTP upgrade via the Bearer header, and every line is validated by isStdoutMessage before use.
     this.ws.addEventListener('message', event => {
       const data = typeof event.data === 'string' ? event.data : ''
       const lines = data.split('\n').filter((l: string) => l.trim())

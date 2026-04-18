@@ -1340,6 +1340,7 @@ export const COMMON_ALIASES: Record<string, string> = Object.assign(
     chdir: 'Set-Location',
     pushd: 'Push-Location',
     popd: 'Pop-Location',
+    // deepcode ignore NoHardcodedPasswords: `pwd` here is the POSIX "print working directory" command, not a password. It maps to PowerShell's Get-Location alias. The Snyk rule is triggering on the three-letter identifier, not on credential content.
     pwd: 'Get-Location',
     gl: 'Get-Location',
     // Items

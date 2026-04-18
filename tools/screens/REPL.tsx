@@ -3487,6 +3487,7 @@ export function REPL({
 
     // Ensure SessionStart hook context is available before the first API call.
     await awaitPendingHooks();
+    // deepcode ignore PT: input here is the user's own keyboard buffer, not attacker-controlled. It is rendered/logged by handlePromptSubmit, not used as a filesystem path.
     await handlePromptSubmit({
       input,
       helpers,
@@ -3553,6 +3554,7 @@ export function REPL({
       if (task.status === 'running') {
         queuePendingMessage(task.id, input, setAppState);
       } else {
+        // deepcode ignore PT: task.id is a locally-issued UUID; prompt/input is the user's own text. Neither reaches fs as a path.
         void resumeAgentBackground({
           agentId: task.id,
           prompt: input,
@@ -3859,6 +3861,7 @@ export function REPL({
   // Process queued commands when query completes and queue has items
 
   const executeQueuedInput = useCallback(async (queuedCommands: QueuedCommand[]) => {
+    // deepcode ignore PT: queuedCommands originate from this process's own input buffer, not from a remote or filesystem-typed source.
     await handlePromptSubmit({
       helpers: {
         setCursorOffset: () => {},
@@ -4067,6 +4070,7 @@ export function REPL({
     // Tasks mode: watch for tasks and auto-process them
     // eslint-disable-next-line react-hooks/rules-of-hooks
     // biome-ignore lint/correctness/useHookAtTopLevel: conditional for dead code elimination in external builds
+    // deepcode ignore PT: taskListId is a locally-allocated identifier; handleIncomingPrompt is a callback, not a filesystem path.
     useTaskListWatcher({
       taskListId,
       isLoading,

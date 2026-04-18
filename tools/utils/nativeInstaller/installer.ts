@@ -73,6 +73,16 @@ import {
 
 export const VERSION_RETENTION_COUNT = 2
 
+// Version IDs come from a remote update server and get interpolated into
+// filesystem paths. Restrict to a strict allowlist so taint can't traverse.
+const VALID_VERSION_ID = /^[0-9A-Za-z._-]{1,64}$/
+function assertValidVersionId(version: string): string {
+  if (typeof version !== 'string' || !VALID_VERSION_ID.test(version)) {
+    throw new Error(`Invalid version id: ${JSON.stringify(version)}`)
+  }
+  return version
+}
+
 // 7 days in milliseconds - used for mtime-based lock stale timeout.
 // This is long enough to survive laptop sleep durations while still
 // allowing cleanup of abandoned locks from crashed processes within a reasonable time.
@@ -151,6 +161,7 @@ async function isPossibleClaudeBinary(filePath: string): Promise<boolean> {
 }
 
 async function getVersionPaths(version: string) {
+  assertValidVersionId(version)
   const dirs = getBaseDirectories()
 
   // Create directories, but not the executable path (which is a file)
@@ -442,6 +453,7 @@ async function performVersionUpdate(
   version: string,
   forceReinstall: boolean,
 ): Promise<boolean> {
+  assertValidVersionId(version)
   const { stagingPath: baseStagingPath, installPath } =
     await getVersionPaths(version)
   const { executable: executablePath } = getBaseDirectories()
@@ -488,6 +500,7 @@ async function performVersionUpdate(
 }
 
 async function versionIsAvailable(version: string): Promise<boolean> {
+  assertValidVersionId(version)
   const { installPath } = await getVersionPaths(version)
   return isPossibleClaudeBinary(installPath)
 }

@@ -24,6 +24,18 @@ const ROOT_REAL = fs.realpathSync(ROOT);
 const PORT = parseInt(process.argv[2] || process.env.PORT || '7777', 10);
 const HOST = process.env.HOST || '127.0.0.1';
 
+// Loopback guard: cleartext HTTP is only acceptable over loopback. Refuse to
+// bind to any non-loopback address unless HTTPS_KEY + HTTPS_CERT are configured.
+// This blocks accidental LAN exposure of an unencrypted dev server.
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
+if (!LOOPBACK_HOSTS.has(HOST) && !(process.env.HTTPS_KEY && process.env.HTTPS_CERT)) {
+  console.error(
+    `\x1b[31m[x]\x1b[0m Refusing to bind cleartext HTTP to non-loopback host ${HOST}.\n` +
+    `    Either unset HOST, set HOST=127.0.0.1, or provide HTTPS_KEY + HTTPS_CERT to enable TLS.`,
+  );
+  process.exit(1);
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'text/javascript; charset=utf-8',
@@ -164,8 +176,6 @@ function handler(req, res) {
 const HTTPS_KEY = process.env.HTTPS_KEY;
 const HTTPS_CERT = process.env.HTTPS_CERT;
 
-const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
-
 let server;
 let scheme = 'http';
 if (HTTPS_KEY && HTTPS_CERT) {
@@ -175,17 +185,7 @@ if (HTTPS_KEY && HTTPS_CERT) {
   );
   scheme = 'https';
 } else {
-  // Cleartext HTTP is only permitted on loopback. The server exists to serve
-  // the static Web/ bundle to the user's own browser (ES modules break over
-  // file://), so loopback is the normal case. Binding to a non-loopback host
-  // without TLS would expose credentials/content on the wire — refuse it and
-  // point the user at HTTPS_KEY/HTTPS_CERT.
-  if (!LOOPBACK_HOSTS.has(HOST)) {
-    console.error(`\x1b[31m[x]\x1b[0m Refusing to start cleartext HTTP on non-loopback host "${HOST}".`);
-    console.error('    Bind to 127.0.0.1, or set HTTPS_KEY and HTTPS_CERT to enable TLS.');
-    process.exit(1);
-  }
-  // deepcode ignore HttpToHttps: intentional loopback-only cleartext; non-loopback is refused above and TLS is opt-in via HTTPS_KEY/HTTPS_CERT.
+  // deepcode ignore HttpToHttps: loopback-only dev server for serving the static Web/ bundle to the user's own browser (ES modules break over file://). The LOOPBACK_HOSTS guard at startup refuses to bind cleartext HTTP on any non-loopback host. Set HTTPS_KEY/HTTPS_CERT to enable TLS for LAN use.
   server = http.createServer(handler);
 }
 

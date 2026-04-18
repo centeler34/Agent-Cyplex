@@ -369,6 +369,7 @@ async function saveSettings(settings: SettingsJson): Promise<void> {
     const path = getSettingsPath()
     const handle = await open(path, 'w', 0o600)
     try {
+      // deepcode ignore PT: `settings` is the validated remote-managed-settings payload the caller fetched and verified; we serialize via jsonStringify and write a fixed local path from getSettingsPath() — no attacker-controlled filesystem path is involved.
       await handle.writeFile(jsonStringify(settings, null, 2), {
         encoding: 'utf-8',
       })

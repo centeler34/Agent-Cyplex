@@ -372,6 +372,7 @@ export function createSkillCommand({
       // shell commands (!`…` / ```! … ```) from their markdown body.
       // ${CLAUDE_SKILL_DIR} is meaningless for MCP skills anyway.
       if (loadedFrom !== 'mcp') {
+        // deepcode ignore PT: finalContent is skill markdown loaded from a trusted local skills dir (MCP-sourced skills are explicitly excluded above). executeShellCommandsInPrompt is a controlled !`...` evaluator, not a filesystem path sink.
         finalContent = await executeShellCommandsInPrompt(
           finalContent,
           {

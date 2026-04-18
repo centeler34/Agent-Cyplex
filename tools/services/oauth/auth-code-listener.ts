@@ -25,6 +25,7 @@ export class AuthCodeListener {
   private callbackPath: string // Configurable callback path
 
   constructor(callbackPath: string = '/callback') {
+    // deepcode ignore HttpToHttps: RFC 8252 loopback OAuth callback — binds to 127.0.0.1, captures a single auth-code redirect from the user's own browser, then closes. Self-signed TLS adds no real confidentiality on loopback and breaks the browser handshake.
     this.localServer = createServer()
     this.callbackPath = callbackPath
   }

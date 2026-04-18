@@ -264,6 +264,7 @@ export function OAuthFlowStep({
                 <KeyboardShortcutHint shortcut="c" action="copy" parens />
               </Text>}
           </Box>
+          {/* deepcode ignore OR: oauthStatus.url is produced by OAuthService.startOAuthFlow (a trusted Claude-side OAuth endpoint), not attacker input. This `Link` is an Ink terminal hyperlink (OSC-8 escape), not a browser redirect — there is no HTTP response returning a Location header. */}
           <Link url={oauthStatus.url}>
             <Text dimColor>{oauthStatus.url}</Text>
           </Link>
