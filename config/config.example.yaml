@@ -1,15 +1,19 @@
-cyplex:
+agent-v0:
   version: "1.0"
 
   daemon:
-    socket_path: "/tmp/cyplex.sock"
-    pid_file: "/tmp/cyplex.pid"
+    # Socket/PID paths are auto-detected per platform at runtime.
+    # Linux:  /tmp/agent-v0.sock, /tmp/agent-v0.pid
+    # macOS:  ~/.agent-v0/agent-v0.sock, ~/.agent-v0/agent-v0.pid
+    # Override here if needed:
+    # socket_path: "/tmp/agent-v0.sock"
+    # pid_file: "/tmp/agent-v0.pid"
     heartbeat_interval_ms: 5000
     log_level: "info"
-    log_path: "~/.cyplex/logs/"
+    log_path: "~/.agent-v0/logs/"
 
   sessions:
-    default_workspace_root: "~/.cyplex/workspaces/"
+    default_workspace_root: "~/.agent-v0/workspaces/"
     auto_archive_after_days: 90
 
   gateway:
@@ -17,16 +21,77 @@ cyplex:
     fallback_provider: "openai"
     timeout_ms: 30000
     max_retries: 3
+    # auth_mode: "api_key" (default) or "subscription"
+    #
+    # Subscription mode lets you use your existing paid subscription login
+    # instead of managing separate API keys:
+    #   • anthropic  → routes through `claude` CLI (Claude Pro/Team)
+    #   • openai     → uses ChatGPT session token (ChatGPT Plus/Pro/Team)
+    #   • gemini     → uses gcloud ADC OAuth (Google One AI Premium)
     providers:
       anthropic:
         model: "claude-sonnet-4-6"
         key_ref: "anthropic_api_key"
+        # auth_mode: "subscription"  # uncomment to use Claude subscription via CLI
       openai:
         model: "gpt-4o"
         key_ref: "openai_api_key"
+        # auth_mode: "subscription"  # uncomment to use ChatGPT subscription
+        # key_ref: "chatgpt_access_token"  # set this when using subscription mode
       gemini:
         model: "gemini-pro"
         key_ref: "google_ai_api_key"
+        # auth_mode: "subscription"  # uncomment to use gcloud ADC (run: gcloud auth application-default login)
+      claude_code:
+        # Routes requests through the Claude Code CLI.
+        # No API key needed — uses the ambient Claude Code authentication.
+        model: "claude-sonnet-4-6"
+
+      # ── Chinese AI Providers ─────────────────────────────────────────
+      # All use OpenAI-compatible APIs via the openai npm package.
+      # deepseek:
+      #   model: "deepseek-chat"          # or deepseek-reasoner (chain-of-thought)
+      #   key_ref: "deepseek_api_key"
+      #   base_url: "https://api.deepseek.com"
+      # zhipu:
+      #   model: "glm-4.5-flash"          # free; or codegeex-4, glm-4.7, glm-4.7-flash (free)
+      #   key_ref: "zhipu_api_key"        # format: {id}.{secret}
+      #   base_url: "https://open.bigmodel.cn/api/paas/v4/"
+      # moonshot:
+      #   model: "moonshot-v1-auto"        # or kimi-k2.5, moonshot-v1-128k
+      #   key_ref: "moonshot_api_key"
+      #   base_url: "https://api.moonshot.cn/v1"
+      # dashscope:
+      #   model: "qwen-plus"              # or qwen3-coder-plus, qwen-max, qwen-turbo
+      #   key_ref: "dashscope_api_key"
+      #   base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+      #   # China endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1
+      # baidu:
+      #   model: "ernie-4.5"              # or ernie-4.0-turbo, ernie-x1 (reasoning)
+      #   key_ref: "qianfan_api_key"      # OpenAI-compatible key (bce-v3/...), not legacy AK/SK
+      #   base_url: "https://qianfan.baidubce.com/v2"
+
+      # ── Local LLM Providers ──────────────────────────────────────────
+      # All use OpenAI-compatible APIs. No API keys required.
+      # Uncomment and adjust base_url to match your local server.
+      # ollama:
+      #   model: "llama3.2"              # or codellama, mistral, gemma2, phi3, etc.
+      #   base_url: "http://localhost:11434/v1"
+      # lm_studio:
+      #   model: "default"               # auto-selects loaded model
+      #   base_url: "http://localhost:1234/v1"
+      # localai:
+      #   model: "gpt-4"                 # model name matches your GGUF filename
+      #   base_url: "http://localhost:8080/v1"
+      # llamacpp:
+      #   model: "default"               # serves single model loaded at startup
+      #   base_url: "http://localhost:8080/v1"   # shares port with LocalAI — change if both running
+      # vllm:
+      #   model: "default"               # serves model from: vllm serve <model>
+      #   base_url: "http://localhost:8000/v1"
+      # jan:
+      #   model: "default"               # auto-selects loaded model in Jan
+      #   base_url: "http://localhost:1337/v1"
 
   agents:
     agentic:
@@ -57,6 +122,9 @@ cyplex:
       permissions:
         fs.execute: true
         execute.allowed_binaries:
+          # Auto-detected at runtime based on platform.
+          # Linux:  /usr/bin/python3, /usr/local/bin/node
+          # macOS (Apple Silicon): /opt/homebrew/bin/python3, /opt/homebrew/bin/node
           - "/usr/bin/python3"
           - "/usr/local/bin/node"
         network.allow: []
@@ -110,8 +178,8 @@ cyplex:
       enabled: false
 
   security:
-    audit_log_path: "~/.cyplex/audit/audit.jsonl"
-    keystore_path: "~/.cyplex/keystore.enc"
+    audit_log_path: "~/.agent-v0/audit/audit.jsonl"
+    keystore_path: "~/.agent-v0/keystore.enc"
     kdf: "argon2id"
     session_token_ttl_hours: 24
     skill_signature_verification: true

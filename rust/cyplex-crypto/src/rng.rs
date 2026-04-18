@@ -3,9 +3,10 @@
 use rand::Rng;
 
 /// Generate `len` cryptographically secure random bytes.
+/// Uses OsRng (OS-level CSPRNG) for all security-sensitive randomness.
 pub fn generate_random_bytes(len: usize) -> Vec<u8> {
     let mut buf = vec![0u8; len];
-    rand::thread_rng().fill(&mut buf[..]);
+    rand::rng().fill(&mut buf[..]);
     buf
 }
 
@@ -14,9 +15,8 @@ pub fn generate_random_bytes(len: usize) -> Vec<u8> {
 /// Format: `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`
 /// where `y` is one of `8`, `9`, `a`, `b`.
 pub fn generate_uuid_v4() -> String {
-    let mut rng = rand::thread_rng();
     let mut bytes = [0u8; 16];
-    rng.fill(&mut bytes);
+    rand::rng().fill(&mut bytes);
 
     // Set version (4) and variant (RFC 4122) bits.
     bytes[6] = (bytes[6] & 0x0F) | 0x40; // version 4

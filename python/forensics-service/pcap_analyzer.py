@@ -1,7 +1,21 @@
 """PCAP parsing and network anomaly detection."""
 
+import os
 from collections import Counter
 from typing import Any
+
+
+def _validate_file_path(file_path: str) -> str | None:
+    """Validate that file_path is safe (no traversal) and exists. Returns error or None."""
+    if not file_path:
+        return "file_path is required"
+    # Block path traversal (CWE-23)
+    if ".." in file_path or file_path.startswith("/etc") or file_path.startswith("/proc"):
+        return f"Path traversal blocked: {file_path}"
+    real = os.path.realpath(file_path)
+    if not os.path.isfile(real):
+        return f"File not found: {file_path}"
+    return None
 
 
 def analyze_pcap(file_path: str = "", **kwargs: Any) -> dict:
@@ -11,8 +25,9 @@ def analyze_pcap(file_path: str = "", **kwargs: Any) -> dict:
     except ImportError:
         return {"error": "scapy not installed", "install": "pip install scapy"}
 
-    if not file_path:
-        return {"error": "file_path is required"}
+    err = _validate_file_path(file_path)
+    if err:
+        return {"error": err}
 
     packets = rdpcap(file_path)
     total = len(packets)

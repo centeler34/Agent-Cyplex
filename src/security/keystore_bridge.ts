@@ -45,8 +45,22 @@ export class KeystoreBridge {
     };
   }
 
+  /**
+   * Returns the derived 32-byte master key for SQLite column encryption.
+   */
+  getDerivedKey(): Buffer {
+    if (!this.derivedKey) {
+      throw new Error('Keystore must be opened before accessing the master key');
+    }
+    return this.derivedKey;
+  }
+
+  private static SAFE_KEY_NAME = /^[a-zA-Z0-9._-]+$/;
+
   get(name: string): string | null {
     if (!this.data || !this.derivedKey) return null;
+    if (!KeystoreBridge.SAFE_KEY_NAME.test(name)) return null;
+    if (!Object.prototype.hasOwnProperty.call(this.data.entries, name)) return null;
     const entry = this.data.entries[name];
     if (!entry) return null;
 
@@ -55,6 +69,7 @@ export class KeystoreBridge {
 
   set(name: string, value: string): void {
     if (!this.data || !this.derivedKey) throw new Error('Keystore not open');
+    if (!KeystoreBridge.SAFE_KEY_NAME.test(name)) throw new Error(`Invalid key name: "${name}"`);
 
     const encrypted = this.encrypt(value, this.derivedKey);
     this.data.entries[name] = {
@@ -81,11 +96,11 @@ export class KeystoreBridge {
     if (!this.data) throw new Error('Keystore not open');
     const dir = path.substring(0, path.lastIndexOf('/'));
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path, JSON.stringify(this.data, null, 2), 'utf-8');
+    fs.writeFileSync(path, JSON.stringify(this.data, null, 2), { encoding: 'utf-8', mode: 0o600 });
   }
 
   private deriveKey(password: string, salt: string): Buffer {
-    return crypto.scryptSync(password, salt, 32, { N: 16384, r: 8, p: 1 });
+    return crypto.scryptSync(password, salt, 32, { N: 65536, r: 8, p: 1 });
   }
 
   private encrypt(plaintext: string, key: Buffer): string {

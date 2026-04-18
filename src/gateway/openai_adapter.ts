@@ -1,5 +1,8 @@
 /**
  * OpenAI adapter — implements ModelClient for the OpenAI API.
+ *
+ * Models: gpt-4o, gpt-4.1, o3, o4-mini, gpt-4o-mini
+ * Docs:   https://platform.openai.com/docs/models
  */
 
 import OpenAI from 'openai';

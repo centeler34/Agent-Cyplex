@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent v0 | Neon Architect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Auth Overlay
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div id="auth" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <span class="material-symbols-outlined">security</span>
+        </div>
+        <h1 class="auth-title">Agent v0</h1>
+        <p class="auth-subtitle">Multi-Agent AI Orchestration Terminal</p>
+      </div>
+      <div id="auth-error" class="auth-error" style="display:none"></div>
+      <div class="auth-field">
+        <label for="passInput">Master Password</label>
+        <input type="password" id="passInput" placeholder="Enter password to unlock fleet..." autocomplete="off">
+      </div>
+      <button id="authBtn" class="btn-gradient">Unlock Fleet</button>
+      <p class="auth-footer">AES-256-GCM encrypted keystore &bull; Argon2id KDF</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Main Workspace
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div id="workspace" class="workspace" style="display:none">
+
+    <!-- Top App Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="brand-text">Agent v0</span>
+        <nav class="topbar-nav" id="topbar-nav">
+          <a class="nav-link active" data-section="terminal">Terminal</a>
+          <a class="nav-link" data-section="tasks">Tasks</a>
+          <a class="nav-link" data-section="memory">Memory</a>
+          <a class="nav-link" data-section="audit">Security</a>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <div class="search-bar">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" placeholder="Search..." id="globalSearch">
+        </div>
+        <div class="status-pills">
+          <div class="pill" id="pill-agents">
+            <span class="pill-dot dot-idle"></span>
+            <span id="pill-agents-text">0 agents</span>
+          </div>
+          <div class="pill" id="pill-cost">
+            <span id="pill-cost-text">$0.00</span>
+          </div>
+        </div>
+        <div id="connection-status" class="conn-badge disconnected">
+          <span class="conn-dot"></span>
+          <span id="conn-text">Connecting</span>
+        </div>
+        <button class="btn-gradient-sm" id="aiSyncBtn">AI Sync</button>
+      </div>
+    </header>
+
+    <!-- Workspace body: icon rail + side panel + main + chat -->
+    <div class="workspace-body">
+
+      <!-- Icon Rail (leftmost) -->
+      <aside class="icon-rail">
+        <div class="rail-top">
+          <button class="rail-btn active" data-panel="fleet" title="Agent Fleet">
+            <span class="material-symbols-outlined">groups</span>
+          </button>
+          <button class="rail-btn" data-panel="search" title="Search">
+            <span class="material-symbols-outlined">search</span>
+          </button>
+          <button class="rail-btn" data-panel="tools" title="Tools">
+            <span class="material-symbols-outlined">build</span>
+          </button>
+          <button class="rail-btn" data-panel="extensions" title="Extensions">
+            <span class="material-symbols-outlined">extension</span>
+          </button>
+          <button class="rail-btn" data-panel="chat" title="AI Chat">
+            <span class="material-symbols-outlined">forum</span>
+          </button>
+        </div>
+        <div class="rail-bottom">
+          <button class="rail-btn" data-panel="settings" title="Settings">
+            <span class="material-symbols-outlined">settings</span>
+          </button>
+          <button class="rail-btn" data-panel="account" title="Account">
+            <span class="material-symbols-outlined">person</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Agent Fleet Side Panel -->
+      <section class="side-panel" id="fleet-panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Explorer</h2>
+          <div style="display:flex;gap:4px">
+            <button class="icon-btn" title="Refresh fleet" id="refreshFleetBtn">
+              <span class="material-symbols-outlined">refresh</span>
+            </button>
+          </div>
+        </div>
+        <div class="agent-list" id="agent-list">
+          <div class="placeholder-text">Authenticate to view agents</div>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <div class="panel-head">
+          <h2 class="panel-title">Quick Actions</h2>
+        </div>
+        <div class="quick-grid">
+          <button class="qa-chip" data-cmd="status">
+            <span class="material-symbols-outlined">monitoring</span>Status
+          </button>
+          <button class="qa-chip" data-cmd="agent list">
+            <span class="material-symbols-outlined">groups</span>Agents
+          </button>
+          <button class="qa-chip" data-cmd="task list">
+            <span class="material-symbols-outlined">task_alt</span>Tasks
+          </button>
+          <button class="qa-chip" data-cmd="audit query --last 1h">
+            <span class="material-symbols-outlined">shield</span>Audit
+          </button>
+          <button class="qa-chip" data-cmd="keys list">
+            <span class="material-symbols-outlined">key</span>Keys
+          </button>
+          <button class="qa-chip" id="newMemoryChip">
+            <span class="material-symbols-outlined">psychology</span>Memory
+          </button>
+        </div>
+
+        <div class="panel-spacer"></div>
+
+        <div class="system-info">
+          <div class="sys-row">
+            <span>Uptime</span><span id="sys-uptime" class="sys-val">--</span>
+          </div>
+          <div class="sys-row">
+            <span>Encryption</span><span class="sys-val sys-ok">AES-256-GCM</span>
+          </div>
+          <div class="sys-row">
+            <span>Audit</span><span class="sys-val sys-ok">SHA-256</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search Side Panel -->
+      <section class="side-panel" id="search-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Search</h2>
+        </div>
+        <div style="padding:0 12px">
+          <input type="text" id="sideSearchInput" class="search-sm" placeholder="Search agents, tasks, logs..." style="width:100%;margin-bottom:12px">
+        </div>
+        <div id="search-results" class="card-grid" style="padding:8px 12px">
+          <div class="empty-state" style="padding:24px 8px">Type a query to search across agents, tasks, memories, and audit logs.</div>
+        </div>
+      </section>
+
+      <!-- Tools Side Panel -->
+      <section class="side-panel" id="tools-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Tools</h2>
+        </div>
+        <div class="quick-grid" style="padding:8px">
+          <button class="qa-chip" data-cmd="keys list">
+            <span class="material-symbols-outlined">key</span>Keystore
+          </button>
+          <button class="qa-chip" data-cmd="audit query --last 1h">
+            <span class="material-symbols-outlined">shield</span>Audit
+          </button>
+          <button class="qa-chip" data-cmd="config show">
+            <span class="material-symbols-outlined">tune</span>Config
+          </button>
+          <button class="qa-chip" data-cmd="health check">
+            <span class="material-symbols-outlined">monitor_heart</span>Health
+          </button>
+          <button class="qa-chip" data-cmd="skill list">
+            <span class="material-symbols-outlined">extension</span>Skills
+          </button>
+          <button class="qa-chip" data-cmd="rate-limit status">
+            <span class="material-symbols-outlined">speed</span>Limits
+          </button>
+        </div>
+      </section>
+
+      <!-- Extensions Side Panel -->
+      <section class="side-panel" id="extensions-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Extensions</h2>
+        </div>
+        <div class="card-grid" style="padding:8px 12px">
+          <div class="empty-state" style="padding:24px 8px">No extensions installed. Extensions can add custom skills, integrations, and tools.</div>
+        </div>
+      </section>
+
+      <!-- Settings Side Panel -->
+      <section class="side-panel" id="settings-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Settings</h2>
+        </div>
+        <div style="padding:8px 16px; display:flex; flex-direction:column; gap:12px;">
+          <div class="sys-row"><span>Theme</span><span class="sys-val">Neon Architect</span></div>
+          <div class="sys-row"><span>Font Size</span><span class="sys-val">12.5px</span></div>
+          <div class="sys-row"><span>Default Provider</span><span class="sys-val" id="settings-provider">anthropic</span></div>
+          <div class="sys-row"><span>Max Terminal Lines</span><span class="sys-val">500</span></div>
+          <div class="sys-row"><span>Heartbeat Interval</span><span class="sys-val">5s</span></div>
+          <div class="sys-row"><span>Auto-scroll</span><span class="sys-val sys-ok">Enabled</span></div>
+        </div>
+      </section>
+
+      <!-- Account Side Panel -->
+      <section class="side-panel" id="account-panel" style="display:none">
+        <div class="panel-head">
+          <h2 class="panel-title">Account</h2>
+        </div>
+        <div style="padding:12px 16px; display:flex; flex-direction:column; gap:14px;">
+          <div style="text-align:center; padding:16px 0">
+            <div style="width:48px;height:48px;margin:0 auto 8px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:var(--radius-xl);display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="color:var(--on-primary);font-size:24px">person</span>
+            </div>
+            <div style="font-weight:600;font-size:0.85rem" id="account-user">Operator</div>
+            <div style="font-size:0.65rem;color:var(--text-3)">Local Session</div>
+          </div>
+          <div class="sys-row"><span>Auth</span><span class="sys-val sys-ok">Active</span></div>
+          <div class="sys-row"><span>Encryption</span><span class="sys-val sys-ok">AES-256-GCM</span></div>
+          <div class="sys-row"><span>KDF</span><span class="sys-val">Argon2id</span></div>
+          <div class="sys-row"><span>Session</span><span class="sys-val" id="account-session">--</span></div>
+        </div>
+      </section>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+
+        <!-- Terminal Tab -->
+        <div id="terminal-tab" class="tab-panel active">
+          <div class="terminal" id="output">
+            <div class="term-line sys">Agent v0 Command Center initialized</div>
+            <div class="term-line sys">Authenticate to begin fleet orchestration</div>
+          </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks-tab" class="tab-panel">
+          <div class="tab-head">
+            <h3>Active Tasks</h3>
+            <button class="btn-ghost-sm" id="refreshTasksBtn">Refresh</button>
+          </div>
+          <div id="active-tasks" class="card-grid">
+            <div class="empty-state">No active tasks. Submit a task from the terminal.</div>
+          </div>
+        </div>
+
+        <!-- Memory Tab -->
+        <div id="memory-tab" class="tab-panel">
+          <div class="tab-head">
+            <h3>Agent Memory Store</h3>
+            <div class="tab-head-actions">
+              <input type="text" id="memorySearchInput" class="search-sm" placeholder="Search memories...">
+              <button class="btn-ghost-sm" id="clearAllMemoriesBtn" title="Clear all memories">Clear All</button>
+              <button class="btn-accent-sm" id="createMemoryBtn">+ New</button>
+            </div>
+          </div>
+          <div id="memory-list" class="card-grid">
+            <div class="empty-state">No memories stored. Create one to persist agent context.</div>
+          </div>
+        </div>
+
+        <!-- Audit Tab -->
+        <div id="audit-tab" class="tab-panel">
+          <div class="tab-head">
+            <h3>Security Audit Trail</h3>
+            <input type="text" id="auditSearchInput" class="search-sm" placeholder="Filter by agent or action...">
+          </div>
+          <div class="audit-info">
+            <span>Tamper-evident SHA-256 hash chain</span>
+            <span id="audit-count">0 entries</span>
+          </div>
+          <div id="audit-list" class="audit-timeline">
+            <div class="empty-state">Loading audit trail...</div>
+          </div>
+        </div>
+
+        <!-- Command Bar -->
+        <div class="cmd-bar">
+          <span class="cmd-prompt">$</span>
+          <input type="text" id="cmdInput" class="cmd-input" placeholder="Enter command or natural language intent..." disabled>
+          <button class="cmd-send" id="sendBtn" disabled>
+            <span class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+      </main>
+
+      <!-- AI Chat Panel (Right) -->
+      <section class="chat-panel" id="chat-panel">
+        <div class="chat-head">
+          <div class="chat-head-top">
+            <h2 class="panel-title">AI Assistant</h2>
+            <span class="chat-status-dot" id="chatStatusDot"></span>
+          </div>
+          <select class="model-selector" id="modelSelector">
+            <optgroup label="Cloud Providers">
+              <option value="claude_code">Claude Code (Agent SDK)</option>
+              <option value="anthropic">Anthropic Claude</option>
+              <option value="openai">OpenAI GPT</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="zhipu">Zhipu AI / CodeGeeX</option>
+              <option value="moonshot">Moonshot / Kimi</option>
+              <option value="dashscope">Qwen / DashScope</option>
+              <option value="baidu">Baidu ERNIE</option>
+            </optgroup>
+            <optgroup label="Local LLM">
+              <option value="ollama">Ollama</option>
+              <option value="lm_studio">LM Studio</option>
+              <option value="localai">LocalAI</option>
+              <option value="llamacpp">llama.cpp</option>
+              <option value="vllm">vLLM</option>
+              <option value="jan">Jan</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-welcome">
+            <div class="chat-welcome-icon">
+              <span class="material-symbols-outlined">auto_awesome</span>
+            </div>
+            <p>Ask the AI assistant anything about your security research, code analysis, or fleet operations.</p>
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="chat-input-box">
+            <textarea id="chatInput" class="chat-textarea" placeholder="Ask Agent v0..." rows="3"></textarea>
+            <div class="chat-input-actions">
+              <div class="chat-input-tools">
+                <button class="icon-btn" title="Attach file">
+                  <span class="material-symbols-outlined">attach_file</span>
+                </button>
+                <button class="icon-btn" title="Reference symbol">
+                  <span class="material-symbols-outlined">tag</span>
+                </button>
+              </div>
+              <button class="chat-send-btn" id="chatSendBtn">
+                <span class="material-symbols-outlined">send</span>
+              </button>
+            </div>
+          </div>
+          <div class="chat-input-hint">
+            <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <div class="status-left">
+        <div class="status-item status-accent">
+          <span class="material-symbols-outlined">account_tree</span>
+          <span id="status-daemon">daemon</span>
+        </div>
+        <div class="status-item" id="status-sync">
+          <span class="material-symbols-outlined">sync</span>
+          <span>Ready</span>
+        </div>
+        <div class="status-item">
+          <span class="material-symbols-outlined">error</span>
+          <span id="status-errors">0</span>
+          <span class="material-symbols-outlined">warning</span>
+          <span id="status-warnings">0</span>
+        </div>
+      </div>
+      <div class="status-right">
+        <span>Agent v0</span>
+        <span>Encrypted</span>
+        <div class="status-item status-accent">
+          <span class="material-symbols-outlined">bolt</span>
+          <span id="ai-status">AI Disconnected</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Memory Creator Modal
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div id="memory-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Create Memory</h2>
+        <button class="modal-close" id="closeMemoryBtn">&times;</button>
+      </div>
+      <form id="memory-form">
+        <div class="form-group">
+          <label for="memType">Memory Type</label>
+          <select id="memType">
+            <option value="user">User Profile</option>
+            <option value="feedback">Feedback / Correction</option>
+            <option value="project">Project Context</option>
+            <option value="reference">External Reference</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="memFact">Fact or Rule</label>
+          <input type="text" id="memFact" placeholder="e.g., Always use Yarn for this project">
+        </div>
+        <div class="form-group">
+          <label for="memWhy">Why?</label>
+          <textarea id="memWhy" rows="2" placeholder="e.g., npm caused dependency conflicts"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="memHow">How to Apply</label>
+          <textarea id="memHow" rows="2" placeholder="e.g., Prioritize Yarn commands"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost-sm" id="cancelMemoryBtn">Cancel</button>
+          <button type="button" class="btn-accent-sm" id="submitMemoryBtn">Save Memory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Keyboard Shortcuts Overlay -->
+  <div id="shortcut-help" class="shortcut-overlay">
+    <div class="shortcut-card">
+      <div class="modal-header">
+        <h2>Keyboard Shortcuts</h2>
+        <button class="modal-close" id="closeShortcutsBtn">&times;</button>
+      </div>
+      <div class="shortcut-grid">
+        <div class="shortcut-row"><kbd>/</kbd><span>Focus command input</span></div>
+        <div class="shortcut-row"><kbd>Esc</kbd><span>Close modals / blur input</span></div>
+        <div class="shortcut-row"><kbd>Ctrl+L</kbd><span>Clear terminal</span></div>
+        <div class="shortcut-row"><kbd>Ctrl+K</kbd><span>Keyboard shortcuts</span></div>
+        <div class="shortcut-row"><kbd>Up/Down</kbd><span>Command history</span></div>
+        <div class="shortcut-row"><kbd>1-4</kbd><span>Switch tabs</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

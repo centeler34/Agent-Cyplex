@@ -154,25 +154,37 @@ fn chrono_now() -> String {
 mod tests {
     use super::*;
     use crate::master_key::MasterKey;
+    use rand::RngCore;
+
+    const TEST_PASSWORD: &str = "test-pass";
+
+    fn random_test_secret(len: usize) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(len);
+        buf.resize(len, 0);
+        rand::rng().fill_bytes(&mut buf);
+        buf
+    }
 
     #[test]
     fn roundtrip_save_load() {
-        let (master_key, salt) = MasterKey::derive("test-pass").unwrap();
+        let (master_key, salt) = MasterKey::derive(TEST_PASSWORD).unwrap();
         let mut ks = KeyStore::new(salt);
-        ks.set("api-key", b"sk-secret-12345");
-        ks.set("db-password", b"hunter2");
+        let api_key = random_test_secret(24);
+        let db_pass = random_test_secret(16);
+        ks.set("api-key", &api_key);
+        ks.set("db-password", &db_pass);
 
-        let dir = std::env::temp_dir().join("cyplex-keystore-test");
+        let dir = std::env::temp_dir().join("agent-v0-keystore-test");
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("test.keystore");
 
         ks.save(&path, &master_key).unwrap();
 
-        let master_key2 = MasterKey::derive_with_salt("test-pass", ks.salt()).unwrap();
+        let master_key2 = MasterKey::derive_with_salt(TEST_PASSWORD, ks.salt()).unwrap();
         let loaded = KeyStore::load(&path, &master_key2).unwrap();
 
-        assert_eq!(loaded.get("api-key").unwrap().value, b"sk-secret-12345");
-        assert_eq!(loaded.get("db-password").unwrap().value, b"hunter2");
+        assert_eq!(loaded.get("api-key").unwrap().value, api_key);
+        assert_eq!(loaded.get("db-password").unwrap().value, db_pass);
         assert_eq!(loaded.list().len(), 2);
 
         std::fs::remove_dir_all(&dir).ok();
@@ -180,7 +192,8 @@ mod tests {
 
     #[test]
     fn set_updates_rotated_at() {
-        let mut ks = KeyStore::new(vec![0u8; 16]);
+        let salt = random_test_secret(16);
+        let mut ks = KeyStore::new(salt);
         ks.set("token", b"v1");
         assert!(ks.get("token").unwrap().rotated_at.is_none());
 
@@ -191,7 +204,8 @@ mod tests {
 
     #[test]
     fn delete_entry() {
-        let mut ks = KeyStore::new(vec![0u8; 16]);
+        let salt = random_test_secret(16);
+        let mut ks = KeyStore::new(salt);
         ks.set("x", b"y");
         assert!(ks.delete("x"));
         assert!(!ks.delete("x"));

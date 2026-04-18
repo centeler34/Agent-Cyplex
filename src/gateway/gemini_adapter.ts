@@ -1,5 +1,8 @@
 /**
  * Google Gemini adapter — implements ModelClient for the Gemini API.
+ *
+ * Models: gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash
+ * Docs:   https://ai.google.dev/gemini-api/docs/models
  */
 
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';

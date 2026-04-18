@@ -1,5 +1,5 @@
 /**
- * Agent Cyplex — First-Run Setup Wizard
+ * Agent v0 — First-Run Setup Wizard
  * Interactive terminal setup that runs on first launch.
  * Configures API keys, bot tokens, and daemon settings.
  */
@@ -7,14 +7,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import crypto from 'node:crypto'; // Added for crypto.randomUUID()
+import { TaskRegistry } from '../orchestrator/task_registry.js';
 import { KeystoreBridge } from '../security/keystore_bridge.js';
+import * as platform from '../utils/platform.js';
 
 const HOME = process.env.HOME || process.env.USERPROFILE || '~';
-const CYPLEX_DIR = path.join(HOME, '.cyplex');
-const CONFIG_PATH = path.join(CYPLEX_DIR, 'config.yaml');
-const KEYSTORE_PATH = path.join(CYPLEX_DIR, 'keystore.enc');
-const SETUP_MARKER = path.join(CYPLEX_DIR, '.setup-complete');
-const ENV_PATH = path.join(CYPLEX_DIR, '.env');
+const AGENT_DIR = platform.DATA_DIR;
+const CONFIG_PATH = path.join(AGENT_DIR, 'config.yaml');
+const KEYSTORE_PATH = path.join(AGENT_DIR, 'keystore.enc');
+const SETUP_MARKER = path.join(AGENT_DIR, '.setup-complete');
+const ENV_PATH = path.join(AGENT_DIR, '.env');
 
 // ── ANSI Palette ─────────────────────────────────────────────────────────────
 
@@ -173,6 +176,7 @@ interface SetupConfig {
   defaultProvider: string;
   fallbackProvider: string;
   keys: Record<string, string>;
+  localProviders: Record<string, string>;
   enableTelegram: boolean;
   telegramToken: string;
   enableDiscord: boolean;
@@ -192,31 +196,32 @@ function printWizardBanner(): void {
   console.log(`  ${x.blue}${x.bold} ╚██████╗   ██║   ██║     ███████╗███████╗██╔╝ ██╗${x.reset}`);
   console.log(`  ${x.blue}${x.bold}  ╚═════╝   ╚═╝   ╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝${x.reset}`);
   console.log('');
-  console.log(`  ${x.bold}${x.white}  Setup Wizard${x.reset}  ${x.dim}v0.2.0${x.reset}`);
+  console.log(`  ${x.bold}${x.white}  Setup Wizard${x.reset}  ${x.dim}v1.0.0${x.reset}`);
   console.log(`  ${x.dim}  First-time configuration${x.reset}`);
   console.log('');
 }
 
 async function stepWelcome(rl: readline.Interface): Promise<void> {
   console.log(boxLine([
-    `${x.bold}${x.white}Welcome to Agent Cyplex${x.reset}`,
+    `${x.bold}${x.white}Welcome to Agent v0${x.reset}`,
     `${x.dim}Multi-Agent AI Orchestration Terminal${x.reset}`,
     ``,
-    `${x.white}This wizard configures:${x.reset}`,
+    `${x.white}This wizard sets up your personal AI hub:${x.reset}`,
     ``,
     `  ${x.brightCyan}01${x.reset}  ${x.white}Master password${x.reset}     ${x.dim}AES-256 encrypted keystore${x.reset}`,
-    `  ${x.brightCyan}02${x.reset}  ${x.white}Cloud AI providers${x.reset}  ${x.dim}Anthropic, OpenAI, Gemini${x.reset}`,
-    `  ${x.brightCyan}03${x.reset}  ${x.white}Bot integrations${x.reset}    ${x.dim}Telegram, Discord, WhatsApp${x.reset}`,
-    `  ${x.brightCyan}04${x.reset}  ${x.white}Daemon settings${x.reset}     ${x.dim}Logging, socket config${x.reset}`,
+    `  ${x.brightCyan}02${x.reset}  ${x.white}Cloud AI providers${x.reset}  ${x.dim}Anthropic, OpenAI, Gemini, DeepSeek, Qwen, +more${x.reset}`,
+    `  ${x.brightCyan}03${x.reset}  ${x.white}Local LLM providers${x.reset} ${x.dim}Ollama, LM Studio, vLLM, llama.cpp, +more${x.reset}`,
+    `  ${x.brightCyan}04${x.reset}  ${x.white}Bot integrations${x.reset}    ${x.dim}Telegram, Discord, WhatsApp${x.reset}`,
+    `  ${x.brightCyan}05${x.reset}  ${x.white}Daemon settings${x.reset}     ${x.dim}Logging, socket config${x.reset}`,
     ``,
-    `${x.dim}Re-run anytime: ${x.white}agent-cyplex setup${x.reset}`,
+    `${x.dim}Re-run anytime: ${x.white}agent-v0 setup${x.reset}`,
   ]));
   console.log('');
   await ask(rl, `Press ${x.bold}Enter${x.reset} to begin`);
 }
 
 async function stepMasterPassword(rl: readline.Interface): Promise<string> {
-  stepHeader(1, 4, 'Master Password');
+  stepHeader(1, 5, 'Master Password');
   console.log(`    ${x.white}Your master password encrypts all API keys and secrets.${x.reset}`);
   console.log(`    ${x.yellow}Choose a strong password — it cannot be recovered if lost.${x.reset}`);
   console.log('');
@@ -241,7 +246,7 @@ async function stepMasterPassword(rl: readline.Interface): Promise<string> {
 }
 
 async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Record<string, string>; defaultProvider: string; fallbackProvider: string }> {
-  stepHeader(2, 4, 'Cloud AI Providers');
+  stepHeader(2, 5, 'Cloud AI Providers');
   console.log(`    ${x.white}Configure API keys for cloud AI providers.${x.reset}`);
   console.log(`    ${x.dim}Press Enter to skip any provider you don't use.${x.reset}`);
   console.log('');
@@ -250,21 +255,55 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
 
   // Anthropic
   console.log(`    ${x.purple}┃${x.reset} ${x.bold}${x.white}Anthropic${x.reset} ${x.dim}(Claude)${x.reset}`);
-  const anthropicKey = await askSecret(rl, 'API key (sk-ant-...)');
-  if (anthropicKey) {
-    keys['anthropic_api_key'] = anthropicKey;
-    logSuccess('Anthropic key saved');
+  const anthropicAuthIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-ant-...)',
+    'Subscription (Claude Pro/Team — uses claude CLI)',
+    'Skip',
+  ], 0);
+  if (anthropicAuthIdx === 0) {
+    const anthropicKey = await askSecret(rl, 'API key (sk-ant-...)');
+    if (anthropicKey) {
+      keys['anthropic_api_key'] = anthropicKey;
+      logSuccess('Anthropic API key saved');
+    } else {
+      logWarn('Anthropic skipped');
+    }
+  } else if (anthropicAuthIdx === 1) {
+    keys['anthropic_subscription'] = 'true';
+    logSuccess('Anthropic subscription mode — requests route through claude CLI');
   } else {
     logWarn('Anthropic skipped');
   }
   console.log('');
 
   // OpenAI
-  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}OpenAI${x.reset} ${x.dim}(GPT)${x.reset}`);
-  const openaiKey = await askSecret(rl, 'API key (sk-...)');
-  if (openaiKey) {
-    keys['openai_api_key'] = openaiKey;
-    logSuccess('OpenAI key saved');
+  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}OpenAI / ChatGPT${x.reset}`);
+  const openaiAuthIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-...)',
+    'Subscription (ChatGPT Plus/Pro — session token)',
+    'Skip',
+  ], 0);
+  if (openaiAuthIdx === 0) {
+    const openaiKey = await askSecret(rl, 'API key (sk-...)');
+    if (openaiKey) {
+      keys['openai_api_key'] = openaiKey;
+      logSuccess('OpenAI API key saved');
+    } else {
+      logWarn('OpenAI skipped');
+    }
+  } else if (openaiAuthIdx === 1) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}To get your session token:${x.reset}`);
+    console.log(`      ${x.dim}1. Log into ${x.white}chatgpt.com${x.dim} in your browser${x.reset}`);
+    console.log(`      ${x.dim}2. Visit ${x.white}chatgpt.com/api/auth/session${x.reset}`);
+    console.log(`      ${x.dim}3. Copy the ${x.white}accessToken${x.dim} value${x.reset}`);
+    const sessionToken = await askSecret(rl, 'ChatGPT access token');
+    if (sessionToken) {
+      keys['chatgpt_access_token'] = sessionToken;
+      keys['openai_subscription'] = 'true';
+      logSuccess('ChatGPT subscription token saved');
+    } else {
+      logWarn('OpenAI skipped');
+    }
   } else {
     logWarn('OpenAI skipped');
   }
@@ -272,20 +311,153 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
 
   // Gemini
   console.log(`    ${x.blue}┃${x.reset} ${x.bold}${x.white}Google Gemini${x.reset}`);
-  const geminiKey = await askSecret(rl, 'API key (AI...)');
-  if (geminiKey) {
-    keys['google_ai_api_key'] = geminiKey;
-    logSuccess('Gemini key saved');
+  const geminiAuthIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (AI...)',
+    'Subscription (Google account — uses gcloud ADC)',
+    'Skip',
+  ], 0);
+  if (geminiAuthIdx === 0) {
+    const geminiKey = await askSecret(rl, 'API key (AI...)');
+    if (geminiKey) {
+      keys['google_ai_api_key'] = geminiKey;
+      logSuccess('Gemini API key saved');
+    } else {
+      logWarn('Gemini skipped');
+    }
+  } else if (geminiAuthIdx === 1) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}Make sure you've run:${x.reset}`);
+    console.log(`      ${x.white}gcloud auth application-default login${x.reset}`);
+    keys['gemini_subscription'] = 'true';
+    logSuccess('Gemini subscription mode — requests use gcloud OAuth');
   } else {
     logWarn('Gemini skipped');
   }
   console.log('');
 
+  // Claude Code (Agent SDK) — no API key needed
+  console.log(`    ${x.purple}┃${x.reset} ${x.bold}${x.white}Claude Code${x.reset} ${x.dim}(Agent SDK — no API key needed)${x.reset}`);
+  const useClaudeCode = await askYesNo(rl, 'Route requests through Claude Code?', false);
+  if (useClaudeCode) {
+    keys['claude_code_enabled'] = 'true';
+    logSuccess('Claude Code adapter enabled');
+  } else {
+    logWarn('Claude Code skipped');
+  }
+  console.log('');
+
+  // ── Chinese AI Providers ────────────────────────────────────────────────
+
+  // DeepSeek
+  console.log(`    ${x.blue}┃${x.reset} ${x.bold}${x.white}DeepSeek${x.reset} ${x.dim}(deepseek-chat, deepseek-reasoner)${x.reset}`);
+  const deepseekIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-...)',
+    'Skip',
+  ], 0);
+  if (deepseekIdx === 0) {
+    const deepseekKey = await askSecret(rl, 'API key (sk-...)');
+    if (deepseekKey) {
+      keys['deepseek_api_key'] = deepseekKey;
+      logSuccess('DeepSeek API key saved');
+    } else {
+      logWarn('DeepSeek skipped');
+    }
+  } else {
+    logWarn('DeepSeek skipped');
+  }
+  console.log('');
+
+  // Zhipu AI / CodeGeeX
+  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}Zhipu AI / CodeGeeX${x.reset} ${x.dim}(GLM-4, CodeGeeX-4)${x.reset}`);
+  const zhipuIdx = await askChoice(rl, 'Authentication method:', [
+    'API key ({id}.{secret} format)',
+    'Skip',
+  ], 0);
+  if (zhipuIdx === 0) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}Get your key at ${x.white}open.bigmodel.cn${x.reset}`);
+    console.log(`      ${x.dim}Key format: ${x.white}xxxxxxxx.xxxxxxxx${x.dim} (id.secret)${x.reset}`);
+    const zhipuKey = await askSecret(rl, 'API key (id.secret)');
+    if (zhipuKey) {
+      keys['zhipu_api_key'] = zhipuKey;
+      logSuccess('Zhipu AI API key saved');
+    } else {
+      logWarn('Zhipu AI skipped');
+    }
+  } else {
+    logWarn('Zhipu AI skipped');
+  }
+  console.log('');
+
+  // Moonshot AI / Kimi
+  console.log(`    ${x.cyan}┃${x.reset} ${x.bold}${x.white}Moonshot AI / Kimi${x.reset} ${x.dim}(moonshot-v1, kimi-k2.5)${x.reset}`);
+  const moonshotIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (sk-...)',
+    'Skip',
+  ], 0);
+  if (moonshotIdx === 0) {
+    const moonshotKey = await askSecret(rl, 'API key (sk-...)');
+    if (moonshotKey) {
+      keys['moonshot_api_key'] = moonshotKey;
+      logSuccess('Moonshot API key saved');
+    } else {
+      logWarn('Moonshot skipped');
+    }
+  } else {
+    logWarn('Moonshot skipped');
+  }
+  console.log('');
+
+  // Alibaba DashScope / Qwen
+  console.log(`    ${x.orange}┃${x.reset} ${x.bold}${x.white}Alibaba DashScope / Qwen${x.reset} ${x.dim}(Tongyi Lingma)${x.reset}`);
+  const dashscopeIdx = await askChoice(rl, 'Authentication method:', [
+    'API key',
+    'Skip',
+  ], 0);
+  if (dashscopeIdx === 0) {
+    const dashscopeKey = await askSecret(rl, 'DashScope API key');
+    if (dashscopeKey) {
+      keys['dashscope_api_key'] = dashscopeKey;
+      logSuccess('DashScope API key saved');
+    } else {
+      logWarn('DashScope skipped');
+    }
+  } else {
+    logWarn('DashScope skipped');
+  }
+  console.log('');
+
+  // Baidu Qianfan / ERNIE
+  console.log(`    ${x.red}┃${x.reset} ${x.bold}${x.white}Baidu Qianfan / ERNIE${x.reset} ${x.dim}(Comate)${x.reset}`);
+  const baiduIdx = await askChoice(rl, 'Authentication method:', [
+    'API key (bce-v3/...)',
+    'Skip',
+  ], 0);
+  if (baiduIdx === 0) {
+    console.log(`    ${x.cyan}●${x.reset} ${x.dim}Get your key at ${x.white}qianfan.baidubce.com${x.reset}`);
+    console.log(`      ${x.dim}Use the OpenAI-compatible API key (not legacy AK/SK)${x.reset}`);
+    const baiduKey = await askSecret(rl, 'Qianfan API key');
+    if (baiduKey) {
+      keys['qianfan_api_key'] = baiduKey;
+      logSuccess('Baidu Qianfan API key saved');
+    } else {
+      logWarn('Baidu skipped');
+    }
+  } else {
+    logWarn('Baidu skipped');
+  }
+  console.log('');
+
   // Default provider
   const configured = [];
-  if (keys['anthropic_api_key']) configured.push('anthropic');
-  if (keys['openai_api_key']) configured.push('openai');
-  if (keys['google_ai_api_key']) configured.push('gemini');
+  if (keys['anthropic_api_key'] || keys['anthropic_subscription']) configured.push('anthropic');
+  if (keys['openai_api_key'] || keys['openai_subscription']) configured.push('openai');
+  if (keys['google_ai_api_key'] || keys['gemini_subscription']) configured.push('gemini');
+  if (keys['claude_code_enabled']) configured.push('claude_code');
+  if (keys['deepseek_api_key']) configured.push('deepseek');
+  if (keys['zhipu_api_key']) configured.push('zhipu');
+  if (keys['moonshot_api_key']) configured.push('moonshot');
+  if (keys['dashscope_api_key']) configured.push('dashscope');
+  if (keys['qianfan_api_key']) configured.push('baidu');
+  // Local providers are added in stepLocalProviders — not here
 
   let defaultProvider = 'anthropic';
   let fallbackProvider = 'openai';
@@ -306,8 +478,93 @@ async function stepCloudProviders(rl: readline.Interface): Promise<{ keys: Recor
   return { keys, defaultProvider, fallbackProvider };
 }
 
+async function stepLocalProviders(rl: readline.Interface): Promise<Record<string, string>> {
+  stepHeader(3, 5, 'Local LLM Providers');
+  console.log(`    ${x.white}Configure local LLM servers running on your machine.${x.reset}`);
+  console.log(`    ${x.dim}Skip any provider you don't use. No API keys needed.${x.reset}`);
+  console.log('');
+
+  const localConfig: Record<string, string> = {};
+
+  // Ollama
+  console.log(`    ${x.green}┃${x.reset} ${x.bold}${x.white}Ollama${x.reset} ${x.dim}(llama3.2, codellama, mistral, gemma2)${x.reset}`);
+  const ollamaIdx = await askChoice(rl, 'Configure Ollama?', ['Configure', 'Skip'], 1);
+  if (ollamaIdx === 0) {
+    const ollamaHost = process.env.OLLAMA_HOST;
+    const defaultUrl = ollamaHost ? `${ollamaHost.replace(/\/+$/, '')}/v1` : 'http://localhost:11434/v1';
+    const url = await ask(rl, 'Ollama base URL', defaultUrl);
+    localConfig['ollama_url'] = url;
+    logSuccess(`Ollama configured at ${url}`);
+  } else {
+    logWarn('Ollama skipped');
+  }
+  console.log('');
+
+  // LM Studio
+  console.log(`    ${x.purple}┃${x.reset} ${x.bold}${x.white}LM Studio${x.reset} ${x.dim}(loads any GGUF model)${x.reset}`);
+  const lmStudioIdx = await askChoice(rl, 'Configure LM Studio?', ['Configure', 'Skip'], 1);
+  if (lmStudioIdx === 0) {
+    const url = await ask(rl, 'LM Studio base URL', 'http://localhost:1234/v1');
+    localConfig['lm_studio_url'] = url;
+    logSuccess(`LM Studio configured at ${url}`);
+  } else {
+    logWarn('LM Studio skipped');
+  }
+  console.log('');
+
+  // LocalAI
+  console.log(`    ${x.cyan}┃${x.reset} ${x.bold}${x.white}LocalAI${x.reset} ${x.dim}(drop-in OpenAI replacement)${x.reset}`);
+  const localaiIdx = await askChoice(rl, 'Configure LocalAI?', ['Configure', 'Skip'], 1);
+  if (localaiIdx === 0) {
+    const url = await ask(rl, 'LocalAI base URL', 'http://localhost:8080/v1');
+    localConfig['localai_url'] = url;
+    logSuccess(`LocalAI configured at ${url}`);
+  } else {
+    logWarn('LocalAI skipped');
+  }
+  console.log('');
+
+  // llama.cpp
+  console.log(`    ${x.yellow}┃${x.reset} ${x.bold}${x.white}llama.cpp${x.reset} ${x.dim}(llama-server)${x.reset}`);
+  const llamacppIdx = await askChoice(rl, 'Configure llama.cpp server?', ['Configure', 'Skip'], 1);
+  if (llamacppIdx === 0) {
+    const url = await ask(rl, 'llama.cpp base URL', 'http://localhost:8080/v1');
+    localConfig['llamacpp_url'] = url;
+    logSuccess(`llama.cpp configured at ${url}`);
+  } else {
+    logWarn('llama.cpp skipped');
+  }
+  console.log('');
+
+  // vLLM
+  console.log(`    ${x.blue}┃${x.reset} ${x.bold}${x.white}vLLM${x.reset} ${x.dim}(high-throughput serving engine)${x.reset}`);
+  const vllmIdx = await askChoice(rl, 'Configure vLLM?', ['Configure', 'Skip'], 1);
+  if (vllmIdx === 0) {
+    const url = await ask(rl, 'vLLM base URL', 'http://localhost:8000/v1');
+    localConfig['vllm_url'] = url;
+    logSuccess(`vLLM configured at ${url}`);
+  } else {
+    logWarn('vLLM skipped');
+  }
+  console.log('');
+
+  // Jan
+  console.log(`    ${x.orange}┃${x.reset} ${x.bold}${x.white}Jan${x.reset} ${x.dim}(desktop AI with local API)${x.reset}`);
+  const janIdx = await askChoice(rl, 'Configure Jan?', ['Configure', 'Skip'], 1);
+  if (janIdx === 0) {
+    const url = await ask(rl, 'Jan base URL', 'http://localhost:1337/v1');
+    localConfig['jan_url'] = url;
+    logSuccess(`Jan configured at ${url}`);
+  } else {
+    logWarn('Jan skipped');
+  }
+  console.log('');
+
+  return localConfig;
+}
+
 async function stepBots(rl: readline.Interface): Promise<{ enableTelegram: boolean; telegramToken: string; enableDiscord: boolean; discordToken: string; enableWhatsapp: boolean; botKeys: Record<string, string> }> {
-  stepHeader(3, 4, 'Bot Integrations');
+  stepHeader(4, 5, 'Bot Integrations');
   console.log(`    ${x.white}Receive tasks from chat platforms.${x.reset}`);
   console.log(`    ${x.dim}Press Enter to skip any integration.${x.reset}`);
   console.log('');
@@ -351,7 +608,7 @@ async function stepBots(rl: readline.Interface): Promise<{ enableTelegram: boole
 }
 
 async function stepDaemon(rl: readline.Interface): Promise<{ logLevel: string; socketPath: string }> {
-  stepHeader(4, 4, 'Daemon & Security');
+  stepHeader(5, 5, 'Daemon & Security');
   console.log(`    ${x.white}Configure the background daemon process.${x.reset}`);
   console.log('');
 
@@ -359,7 +616,7 @@ async function stepDaemon(rl: readline.Interface): Promise<{ logLevel: string; s
   const logLevel = ['debug', 'info', 'warn', 'error'][logIdx];
   console.log('');
 
-  const socketPath = await ask(rl, 'Daemon socket path', '/tmp/cyplex.sock');
+  const socketPath = await ask(rl, 'Daemon socket path', platform.socketPath());
   console.log('');
 
   return { logLevel, socketPath };
@@ -368,18 +625,18 @@ async function stepDaemon(rl: readline.Interface): Promise<{ logLevel: string; s
 // ── Config Generation ────────────────────────────────────────────────────────
 
 function generateConfig(cfg: SetupConfig): string {
-  return `cyplex:
-  version: "1.0"
+  return `agent-v0:
+  version: "1.0.0"
 
   daemon:
-    socket_path: "${cfg.socketPath}"
-    pid_file: "/tmp/cyplex.pid"
+    socket_path: "${platform.socketPath()}"
+    pid_file: "${platform.pidFilePath()}"
     heartbeat_interval_ms: 5000
     log_level: "${cfg.daemonLogLevel}"
-    log_path: "~/.cyplex/logs/"
+    log_path: "${platform.LOG_DIR}/"
 
   sessions:
-    default_workspace_root: "~/.cyplex/workspaces/"
+    default_workspace_root: "~/.agent-v0/workspaces/"
     auto_archive_after_days: 90
 
   gateway:
@@ -390,20 +647,97 @@ function generateConfig(cfg: SetupConfig): string {
     providers:
 ${cfg.keys['anthropic_api_key'] ? `      anthropic:
         model: "claude-sonnet-4-6"
-        key_ref: "anthropic_api_key"` : `      # anthropic:
+        key_ref: "anthropic_api_key"` : cfg.keys['anthropic_subscription'] ? `      anthropic:
+        model: "claude-sonnet-4-6"
+        auth_mode: "subscription"` : `      # anthropic:
       #   model: "claude-sonnet-4-6"
       #   key_ref: "anthropic_api_key"`}
 ${cfg.keys['openai_api_key'] ? `      openai:
         model: "gpt-4o"
-        key_ref: "openai_api_key"` : `      # openai:
+        key_ref: "openai_api_key"` : cfg.keys['openai_subscription'] ? `      openai:
+        model: "gpt-4o"
+        auth_mode: "subscription"
+        key_ref: "chatgpt_access_token"` : `      # openai:
       #   model: "gpt-4o"
       #   key_ref: "openai_api_key"`}
 ${cfg.keys['google_ai_api_key'] ? `      gemini:
         model: "gemini-pro"
-        key_ref: "google_ai_api_key"` : `      # gemini:
+        key_ref: "google_ai_api_key"` : cfg.keys['gemini_subscription'] ? `      gemini:
+        model: "gemini-pro"
+        auth_mode: "subscription"` : `      # gemini:
       #   model: "gemini-pro"
       #   key_ref: "google_ai_api_key"`}
+${cfg.keys['claude_code_enabled'] ? `      claude_code:
+        model: "claude-sonnet-4-6"` : `      # claude_code:
+      #   model: "claude-sonnet-4-6"`}
+${cfg.keys['deepseek_api_key'] ? `      deepseek:
+        model: "deepseek-chat"
+        key_ref: "deepseek_api_key"
+        base_url: "https://api.deepseek.com"` : `      # deepseek:
+      #   model: "deepseek-chat"
+      #   key_ref: "deepseek_api_key"
+      #   base_url: "https://api.deepseek.com"`}
+${cfg.keys['zhipu_api_key'] ? `      zhipu:
+        model: "glm-4.5-flash"
+        key_ref: "zhipu_api_key"
+        base_url: "https://open.bigmodel.cn/api/paas/v4/"` : `      # zhipu:
+      #   model: "glm-4.5-flash"
+      #   key_ref: "zhipu_api_key"
+      #   base_url: "https://open.bigmodel.cn/api/paas/v4/"`}
+${cfg.keys['moonshot_api_key'] ? `      moonshot:
+        model: "moonshot-v1-auto"
+        key_ref: "moonshot_api_key"
+        base_url: "https://api.moonshot.cn/v1"` : `      # moonshot:
+      #   model: "moonshot-v1-auto"
+      #   key_ref: "moonshot_api_key"
+      #   base_url: "https://api.moonshot.cn/v1"`}
+${cfg.keys['dashscope_api_key'] ? `      dashscope:
+        model: "qwen-plus"
+        key_ref: "dashscope_api_key"
+        base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"` : `      # dashscope:
+      #   model: "qwen-plus"
+      #   key_ref: "dashscope_api_key"
+      #   base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"`}
+${cfg.keys['qianfan_api_key'] ? `      baidu:
+        model: "ernie-4.5"
+        key_ref: "qianfan_api_key"
+        base_url: "https://qianfan.baidubce.com/v2"` : `      # baidu:
+      #   model: "ernie-4.5"
+      #   key_ref: "qianfan_api_key"
+      #   base_url: "https://qianfan.baidubce.com/v2"`}
+${cfg.localProviders['ollama_url'] ? `      ollama:
+        model: "llama3.2"
+        base_url: "${cfg.localProviders['ollama_url']}"` : `      # ollama:
+      #   model: "llama3.2"
+      #   base_url: "http://localhost:11434/v1"`}
+${cfg.localProviders['lm_studio_url'] ? `      lm_studio:
+        model: "default"
+        base_url: "${cfg.localProviders['lm_studio_url']}"` : `      # lm_studio:
+      #   model: "default"
+      #   base_url: "http://localhost:1234/v1"`}
+${cfg.localProviders['localai_url'] ? `      localai:
+        model: "gpt-4"
+        base_url: "${cfg.localProviders['localai_url']}"` : `      # localai:
+      #   model: "gpt-4"
+      #   base_url: "http://localhost:8080/v1"`}
+${cfg.localProviders['llamacpp_url'] ? `      llamacpp:
+        model: "default"
+        base_url: "${cfg.localProviders['llamacpp_url']}"` : `      # llamacpp:
+      #   model: "default"
+      #   base_url: "http://localhost:8080/v1"`}
+${cfg.localProviders['vllm_url'] ? `      vllm:
+        model: "default"
+        base_url: "${cfg.localProviders['vllm_url']}"` : `      # vllm:
+      #   model: "default"
+      #   base_url: "http://localhost:8000/v1"`}
+${cfg.localProviders['jan_url'] ? `      jan:
+        model: "default"
+        base_url: "${cfg.localProviders['jan_url']}"` : `      # jan:
+      #   model: "default"
+      #   base_url: "http://localhost:1337/v1"`}
 
+  # Agent Fleet Configuration
+  # You can add as many specialized agents as you desire.
   agents:
     agentic:
       enabled: true
@@ -422,7 +756,7 @@ ${cfg.keys['google_ai_api_key'] ? `      gemini:
       workspace: "workspaces/code/"
       permissions:
         fs.execute: true
-        execute.allowed_binaries: ["/usr/bin/python3", "/usr/local/bin/node"]
+        execute.allowed_binaries: ${JSON.stringify(platform.defaultAllowedBinaries())}
         network.allow: []
     exploit_research:
       enabled: true
@@ -465,8 +799,8 @@ ${cfg.keys['google_ai_api_key'] ? `      gemini:
       enabled: ${cfg.enableWhatsapp}
 
   security:
-    audit_log_path: "~/.cyplex/audit/audit.jsonl"
-    keystore_path: "~/.cyplex/keystore.enc"
+    audit_log_path: "~/.agent-v0/audit/audit.jsonl"
+    keystore_path: "~/.agent-v0/keystore.enc"
     kdf: "argon2id"
     session_token_ttl_hours: 24
     skill_signature_verification: true
@@ -479,23 +813,17 @@ ${cfg.keys['google_ai_api_key'] ? `      gemini:
 }
 
 function generateEnvFile(cfg: SetupConfig): string {
+  // SECURITY: API keys and bot tokens are stored ONLY in the encrypted keystore.
+  // Never write secrets to .env — this file contains only non-sensitive daemon settings.
   return `# ============================================================================
-# Agent Cyplex — Environment Configuration
-# Auto-generated by setup wizard. Do not commit to version control.
+# Agent v0 — Environment Configuration (daemon settings only)
+# Auto-generated by setup wizard.
+# API keys are stored in the encrypted keystore (~/.agent-v0/keystore.enc)
 # ============================================================================
 
-# ── Cloud AI Provider API Keys ─────────────────────────────────────────────
-ANTHROPIC_API_KEY=${cfg.keys['anthropic_api_key'] || ''}
-OPENAI_API_KEY=${cfg.keys['openai_api_key'] || ''}
-GOOGLE_AI_API_KEY=${cfg.keys['google_ai_api_key'] || ''}
-
-# ── Bot Tokens ─────────────────────────────────────────────────────────────
-TELEGRAM_BOT_TOKEN=${cfg.keys['telegram_bot_token'] || ''}
-DISCORD_BOT_TOKEN=${cfg.keys['discord_bot_token'] || ''}
-
 # ── Daemon Settings ────────────────────────────────────────────────────────
-CYPLEX_SOCKET_PATH=${cfg.socketPath}
-CYPLEX_LOG_LEVEL=${cfg.daemonLogLevel}
+AGENT_V0_SOCKET_PATH=${cfg.socketPath}
+AGENT_V0_LOG_LEVEL=${cfg.daemonLogLevel}
 `;
 }
 
@@ -514,6 +842,7 @@ export async function runSetupWizard(): Promise<void> {
 
     const masterPassword = await stepMasterPassword(rl);
     const { keys: cloudKeys, defaultProvider, fallbackProvider } = await stepCloudProviders(rl);
+    const localProviders = await stepLocalProviders(rl);
     const bots = await stepBots(rl);
     const daemon = await stepDaemon(rl);
 
@@ -527,29 +856,32 @@ export async function runSetupWizard(): Promise<void> {
 
     // Create directories
     const dirs = [
-      CYPLEX_DIR,
-      path.join(CYPLEX_DIR, 'logs'),
-      path.join(CYPLEX_DIR, 'audit'),
-      path.join(CYPLEX_DIR, 'workspaces'),
-      path.join(CYPLEX_DIR, 'sessions'),
-      path.join(CYPLEX_DIR, 'quarantine', 'pending'),
-      path.join(CYPLEX_DIR, 'quarantine', 'approved'),
-      path.join(CYPLEX_DIR, 'quarantine', 'rejected'),
+      AGENT_DIR,
+      path.join(AGENT_DIR, 'logs'),
+      path.join(AGENT_DIR, 'audit'),
+      path.join(AGENT_DIR, 'workspaces'),
+      path.join(AGENT_DIR, 'sessions'),
+      path.join(AGENT_DIR, 'quarantine', 'pending'),
+      path.join(AGENT_DIR, 'quarantine', 'approved'),
+      path.join(AGENT_DIR, 'quarantine', 'rejected'),
     ];
     for (const dir of dirs) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    logSuccess('Created ~/.cyplex/ directory structure');
+    logSuccess('Created ~/.agent-v0/ directory structure');
 
     // Save keys to encrypted keystore
     const allKeys = { ...cloudKeys, ...bots.botKeys };
     if (Object.keys(allKeys).length > 0) {
       const keystore = new KeystoreBridge();
+      // Open keystore to get the derived master key
       await keystore.open(KEYSTORE_PATH, masterPassword);
+      const masterKey = keystore.getDerivedKey();
+      const registry = new TaskRegistry();
+      registry.setMasterKey(masterKey);
       for (const [name, value] of Object.entries(allKeys)) {
-        if (value) keystore.set(name, value);
+        if (value) registry.setSecret(name, value);
       }
-      keystore.save(KEYSTORE_PATH);
       logSuccess(`Saved ${Object.keys(allKeys).length} key(s) to encrypted keystore`);
     }
 
@@ -559,6 +891,7 @@ export async function runSetupWizard(): Promise<void> {
       defaultProvider,
       fallbackProvider,
       keys: allKeys,
+      localProviders,
       enableTelegram: bots.enableTelegram,
       telegramToken: bots.telegramToken,
       enableDiscord: bots.enableDiscord,
@@ -568,11 +901,13 @@ export async function runSetupWizard(): Promise<void> {
       socketPath: daemon.socketPath,
     };
 
-    fs.writeFileSync(CONFIG_PATH, generateConfig(cfg), 'utf-8');
-    logSuccess('Generated ~/.cyplex/config.yaml');
+    fs.writeFileSync(CONFIG_PATH, generateConfig(cfg), { encoding: 'utf-8', mode: 0o600 });
+    logSuccess('Generated ~/.agent-v0/config.yaml');
 
-    fs.writeFileSync(ENV_PATH, generateEnvFile(cfg), 'utf-8');
-    logSuccess('Generated ~/.cyplex/.env');
+    // Write .env with restrictive permissions — contains API keys (CWE-732)
+    // No longer storing secrets in .env, only daemon settings
+    fs.writeFileSync(ENV_PATH, generateEnvFile(cfg), { encoding: 'utf-8', mode: 0o600 }); // Still write for daemon settings
+    logSuccess('Generated ~/.agent-v0/.env (daemon settings only)');
 
     fs.writeFileSync(SETUP_MARKER, new Date().toISOString(), 'utf-8');
 
@@ -586,10 +921,10 @@ export async function runSetupWizard(): Promise<void> {
       `${x.brightGreen}${x.bold}Setup Complete${x.reset}`,
       ``,
       `${x.bold}${x.white}Files${x.reset}`,
-      `  ${x.teal}Config${x.reset}     ${x.dim}~/.cyplex/config.yaml${x.reset}`,
-      `  ${x.teal}Env${x.reset}        ${x.dim}~/.cyplex/.env${x.reset}`,
-      `  ${x.teal}Keystore${x.reset}   ${x.dim}~/.cyplex/keystore.enc${x.reset}`,
-      `  ${x.teal}Logs${x.reset}       ${x.dim}~/.cyplex/audit/${x.reset}`,
+      `  ${x.teal}Config${x.reset}     ${x.dim}~/.agent-v0/config.yaml${x.reset}`,
+      `  ${x.teal}Env${x.reset}        ${x.dim}~/.agent-v0/.env${x.reset}`,
+      `  ${x.teal}Keystore${x.reset}   ${x.dim}~/.agent-v0/keystore.enc${x.reset}`,
+      `  ${x.teal}Logs${x.reset}       ${x.dim}~/.agent-v0/audit/${x.reset}`,
       ``,
       `${x.bold}${x.white}Stats${x.reset}`,
       `  ${x.cyan}Providers${x.reset}  ${x.white}${providerCount}${x.reset} ${x.dim}configured${x.reset}`,
@@ -597,8 +932,8 @@ export async function runSetupWizard(): Promise<void> {
       `  ${x.cyan}Log level${x.reset}  ${x.white}${daemon.logLevel}${x.reset}`,
       ``,
       `${x.bold}${x.white}Quick Start${x.reset}`,
-      `  ${x.dim}$${x.reset} ${x.white}agent-cyplex daemon start${x.reset}  ${x.dim}Start daemon${x.reset}`,
-      `  ${x.dim}$${x.reset} ${x.white}agent-cyplex${x.reset}               ${x.dim}Launch REPL${x.reset}`,
+      `  ${x.dim}$${x.reset} ${x.white}agent-v0 daemon start${x.reset}  ${x.dim}Start daemon${x.reset}`,
+      `  ${x.dim}$${x.reset} ${x.white}agent-v0${x.reset}               ${x.dim}Launch REPL${x.reset}`,
     ], x.green));
     console.log('');
 

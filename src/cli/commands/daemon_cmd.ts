@@ -1,5 +1,5 @@
 /**
- * `cyplex daemon` subcommands — start, stop, restart, status, logs.
+ * `agent-v0 daemon` subcommands — start, stop, restart, status, logs.
  */
 
 import type { Command } from 'commander';
@@ -7,6 +7,9 @@ import { sendIpcMessage } from '../ipc_client.js';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+
+import crypto from 'node:crypto'; // Added for crypto.randomUUID()
+import * as platform from '../../utils/platform.js';
 
 const CYAN = '\x1b[36m';
 const GREEN = '\x1b[32m';
@@ -16,8 +19,21 @@ const BOLD = '\x1b[1m';
 const DIM = '\x1b[2m';
 const NC = '\x1b[0m';
 
-const PID_FILE = '/tmp/cyplex.pid';
-const LOG_DIR = path.join(process.env.HOME || '~', '.cyplex', 'logs');
+const PID_FILE = platform.pidFilePath();
+
+function safeHomeDir(): string {
+  const home = process.env.HOME;
+  if (!home || !path.isAbsolute(home) || !fs.existsSync(home)) {
+    const fallback = require('node:os').homedir();
+    if (!fallback || !path.isAbsolute(fallback)) {
+      throw new Error('Cannot determine a valid home directory');
+    }
+    return fallback;
+  }
+  return home;
+}
+
+const LOG_DIR = path.join(safeHomeDir(), '.agent-v0', 'logs');
 
 function isDaemonRunning(): { running: boolean; pid?: number } {
   if (!fs.existsSync(PID_FILE)) return { running: false };
@@ -34,12 +50,12 @@ function isDaemonRunning(): { running: boolean; pid?: number } {
 }
 
 export function registerDaemonCommands(program: Command): void {
-  const daemon = program.command('daemon').description('Manage the Cyplex daemon');
+  const daemon = program.command('daemon').description('Manage the Agent v0 background daemon');
 
   daemon
     .command('start')
-    .description('Start the Cyplex daemon in the background')
-    .option('--socket <path>', 'Unix socket path', '/tmp/cyplex.sock')
+    .description('Start the Agent v0 daemon in the background')
+    .option('--socket <path>', 'Unix socket path', platform.socketPath())
     .option('--foreground', 'Run in foreground (don\'t daemonize)')
     .action(async (opts) => {
       // Check if already running
@@ -51,12 +67,12 @@ export function registerDaemonCommands(program: Command): void {
 
       if (opts.foreground) {
         // Run directly in this process (blocks)
-        const { CyplexDaemon } = await import('../../daemon/daemon.js');
-        const d = new CyplexDaemon({
+        const { AgentV0Daemon } = await import('../../daemon/daemon.js');
+        const d = new AgentV0Daemon({
           socketPath: opts.socket,
           pidFile: PID_FILE,
           heartbeatIntervalMs: 5000,
-          logLevel: process.env.CYPLEX_LOG_LEVEL || 'info',
+          logLevel: process.env.AGENT_V0_LOG_LEVEL || 'info',
           agents: {},
         });
         await d.start();
@@ -105,7 +121,7 @@ export function registerDaemonCommands(program: Command): void {
 
   daemon
     .command('stop')
-    .description('Stop the Cyplex daemon')
+    .description('Stop the Agent v0 background daemon')
     .option('--drain', 'Wait for in-flight tasks before stopping')
     .action(async (opts) => {
       const check = isDaemonRunning();
@@ -153,7 +169,7 @@ export function registerDaemonCommands(program: Command): void {
 
   daemon
     .command('restart')
-    .description('Restart the Cyplex daemon')
+    .description('Restart the Agent v0 background daemon')
     .action(async () => {
       const check = isDaemonRunning();
       if (check.running) {
@@ -234,13 +250,20 @@ export function registerDaemonCommands(program: Command): void {
         return;
       }
 
-      const { execSync, spawn: spawnProc } = await import('node:child_process');
+      const { execFileSync, spawn: spawnProc } = await import('node:child_process');
+      // Validate line count is a positive integer to prevent command injection (CWE-78)
+      const lineCount = parseInt(opts.n, 10);
+      if (isNaN(lineCount) || lineCount <= 0 || lineCount > 100000) {
+        console.log(`${RED}[x]${NC} Invalid line count: ${opts.n}`);
+        return;
+      }
+      const safeN = String(lineCount);
       if (opts.follow) {
-        const tail = spawnProc('tail', ['-f', '-n', opts.n, logFile], { stdio: 'inherit' });
+        const tail = spawnProc('tail', ['-f', '-n', safeN, logFile], { stdio: 'inherit' });
         tail.on('exit', () => process.exit(0));
       } else {
         try {
-          const output = execSync(`tail -n ${opts.n} "${logFile}"`, { encoding: 'utf-8' });
+          const output = execFileSync('tail', ['-n', safeN, logFile], { encoding: 'utf-8' });
           console.log(output);
         } catch {
           console.log(`${RED}[x]${NC} Could not read log file`);

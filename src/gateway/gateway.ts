@@ -16,6 +16,20 @@ import type {
 import { AnthropicAdapter } from './anthropic_adapter.js';
 import { OpenAIAdapter } from './openai_adapter.js';
 import { GeminiAdapter } from './gemini_adapter.js';
+import { ClaudeCodeAdapter } from './claude_code_adapter.js';
+import { ChatGPTSubscriptionAdapter } from './chatgpt_subscription_adapter.js';
+import { GeminiSubscriptionAdapter } from './gemini_subscription_adapter.js';
+import { DeepSeekAdapter } from './deepseek_adapter.js';
+import { ZhipuAdapter } from './zhipu_adapter.js';
+import { MoonshotAdapter } from './moonshot_adapter.js';
+import { DashScopeAdapter } from './dashscope_adapter.js';
+import { BaiduAdapter } from './baidu_adapter.js';
+import { OllamaAdapter } from './ollama_adapter.js';
+import { LMStudioAdapter } from './lm_studio_adapter.js';
+import { LocalAIAdapter } from './localai_adapter.js';
+import { LlamaCppAdapter } from './llamacpp_adapter.js';
+import { VLLMAdapter } from './vllm_adapter.js';
+import { JanAdapter } from './jan_adapter.js';
 import { RateLimiter } from './rate_limiter.js';
 import { CostTracker, type TokenUsage } from './cost_tracker.js';
 
@@ -205,13 +219,48 @@ export class GatewayRouter {
   }
 
   private createAdapter(config: ProviderConfig): ModelClient {
+    const subscription = config.auth_mode === 'subscription';
+
     switch (config.type) {
       case 'anthropic':
-        return new AnthropicAdapter(config);
+        // Subscription mode routes through the Claude CLI (uses Claude Pro/Team login).
+        return subscription
+          ? new ClaudeCodeAdapter(config)
+          : new AnthropicAdapter(config);
       case 'openai':
-        return new OpenAIAdapter(config);
+        // Subscription mode uses a ChatGPT session/access token instead of an API key.
+        return subscription
+          ? new ChatGPTSubscriptionAdapter(config)
+          : new OpenAIAdapter(config);
       case 'gemini':
-        return new GeminiAdapter(config);
+        // Subscription mode uses Google Cloud ADC (gcloud OAuth) instead of an API key.
+        return subscription
+          ? new GeminiSubscriptionAdapter(config)
+          : new GeminiAdapter(config);
+      case 'claude_code':
+        return new ClaudeCodeAdapter(config);
+      case 'deepseek':
+        return new DeepSeekAdapter(config);
+      case 'zhipu':
+        return new ZhipuAdapter(config);
+      case 'moonshot':
+        return new MoonshotAdapter(config);
+      case 'dashscope':
+        return new DashScopeAdapter(config);
+      case 'baidu':
+        return new BaiduAdapter(config);
+      case 'ollama':
+        return new OllamaAdapter(config);
+      case 'lm_studio':
+        return new LMStudioAdapter(config);
+      case 'localai':
+        return new LocalAIAdapter(config);
+      case 'llamacpp':
+        return new LlamaCppAdapter(config);
+      case 'vllm':
+        return new VLLMAdapter(config);
+      case 'jan':
+        return new JanAdapter(config);
       default:
         throw new Error(`Unsupported provider type: ${config.type}`);
     }

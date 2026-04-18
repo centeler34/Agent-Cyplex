@@ -2,7 +2,20 @@
  * Gateway provider configuration types.
  */
 
-export type ProviderType = 'anthropic' | 'openai' | 'gemini' | 'mistral';
+export type ProviderType = 'anthropic' | 'openai' | 'gemini' | 'mistral' | 'claude_code' | 'deepseek' | 'zhipu' | 'moonshot' | 'dashscope' | 'baidu' | 'ollama' | 'lm_studio' | 'localai' | 'llamacpp' | 'vllm' | 'jan';
+
+/**
+ * Authentication mode for a provider.
+ *
+ *   api_key      — Traditional API key (stored in keystore / env var).
+ *   subscription — Use the provider's subscription login instead of an API key:
+ *                    • Claude / Anthropic → routes through `claude` CLI (Claude Pro/Team)
+ *                    • ChatGPT / OpenAI  → uses a stored session/access token from
+ *                      the ChatGPT web session (ChatGPT Plus/Pro/Team)
+ *                    • Gemini / Google    → uses Google Cloud ADC via `gcloud` OAuth
+ *                      (Gemini Advanced / Google One AI Premium)
+ */
+export type AuthMode = 'api_key' | 'subscription';
 
 export interface ProviderConfig {
   name: string;
@@ -10,6 +23,7 @@ export interface ProviderConfig {
   model: string;
   base_url?: string;
   key_ref?: string;
+  auth_mode?: AuthMode;
   timeout_ms: number;
   max_retries: number;
 }

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Architect | Workspace</title>
+
+  <!-- Tailwind with theme tokens -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "tertiary-dim": "#ea82ce",
+            "surface-tint": "#9ba8ff",
+            "on-primary": "#001c8e",
+            "error-dim": "#d73357",
+            "surface-container": "#171924",
+            "on-primary-container": "#001470",
+            "secondary-dim": "#7e51ff",
+            "surface-container-lowest": "#000000",
+            "surface": "#0c0e17",
+            "on-background": "#f0f0fd",
+            "primary-fixed-dim": "#778aff",
+            "surface-container-low": "#11131d",
+            "on-primary-fixed": "#000000",
+            "surface-dim": "#0c0e17",
+            "surface-variant": "#222532",
+            "surface-bright": "#282b3a",
+            "on-primary-fixed-variant": "#001a88",
+            "primary": "#9ba8ff",
+            "outline": "#737580",
+            "tertiary": "#ffa4e4",
+            "primary-dim": "#4963ff",
+            "surface-container-high": "#1c1f2b",
+            "on-surface": "#f0f0fd",
+            "background": "#0c0e17",
+            "inverse-on-surface": "#53545f",
+            "error": "#ff6e84",
+            "secondary-container": "#591adc",
+            "on-error-container": "#ffb2b9",
+            "error-container": "#a70138",
+            "on-error": "#490013",
+            "secondary": "#a68cff",
+            "surface-container-highest": "#222532",
+            "outline-variant": "#464752",
+            "primary-container": "#8999ff",
+            "on-surface-variant": "#aaaab7",
+          },
+          borderRadius: { DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem" },
+          fontFamily: {
+            headline: ["Space Grotesk"],
+            body: ["Manrope"],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Fonts & icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
+
+  <!-- Project styles -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-background text-on-background font-body overflow-hidden h-screen">
+
+  <!-- ══════════ TOAST ══════════ -->
+  <div id="toast" class="toast hidden">
+    <span class="material-symbols-outlined text-sm" id="toastIcon">check_circle</span>
+    <span id="toastMsg">Action completed</span>
+  </div>
+
+  <!-- ══════════ CONTEXT MENU (file tree) ══════════ -->
+  <div id="contextMenu" class="context-menu bg-surface-container-high border border-outline-variant/20 rounded-xl py-1 min-w-[180px] shadow-xl shadow-black/40"></div>
+
+  <!-- ══════════ TOP BAR ══════════ -->
+  <header class="h-12 bg-surface-container-low border-b border-outline-variant/10 flex items-center px-4 text-xs tracking-wide">
+    <div class="flex items-center gap-3 pr-6">
+      <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+        <span class="material-symbols-outlined text-sm text-on-primary">code</span>
+      </div>
+      <span class="font-headline font-bold text-on-surface">Neon Architect</span>
+    </div>
+
+    <nav class="flex gap-1 relative" id="menuBar">
+      <div class="menu-container relative">
+        <button class="menu-trigger px-3 py-1 hover:bg-surface-container rounded-md text-on-surface-variant hover:text-on-surface">File</button>
+        <div class="menu-dropdown absolute left-0 top-full mt-1 bg-surface-container-high rounded-xl border border-outline-variant/20 py-1 min-w-[200px] shadow-xl z-50">
+          <button data-action="new-file" class="menu-item">New File <span class="menu-kbd">Ctrl+N</span></button>
+          <button data-action="new-folder" class="menu-item">New Folder</button>
+          <div class="menu-separator"></div>
+          <button data-action="save" class="menu-item">Save <span class="menu-kbd">Ctrl+S</span></button>
+          <button data-action="save-all" class="menu-item">Save All</button>
+          <button data-action="export" class="menu-item">Export Project</button>
+          <div class="menu-separator"></div>
+          <button data-action="close-tab" class="menu-item">Close Tab <span class="menu-kbd">Ctrl+W</span></button>
+          <button data-action="close-all" class="menu-item">Close All Tabs</button>
+        </div>
+      </div>
+      <div class="menu-container relative">
+        <button class="menu-trigger px-3 py-1 hover:bg-surface-container rounded-md text-on-surface-variant hover:text-on-surface">Edit</button>
+        <div class="menu-dropdown absolute left-0 top-full mt-1 bg-surface-container-high rounded-xl border border-outline-variant/20 py-1 min-w-[200px] shadow-xl z-50">
+          <button data-action="undo" class="menu-item">Undo <span class="menu-kbd">Ctrl+Z</span></button>
+          <button data-action="redo" class="menu-item">Redo <span class="menu-kbd">Ctrl+Y</span></button>
+          <div class="menu-separator"></div>
+          <button data-action="find" class="menu-item">Find <span class="menu-kbd">Ctrl+F</span></button>
+          <button data-action="search" class="menu-item">Find in Project <span class="menu-kbd">Ctrl+Shift+F</span></button>
+        </div>
+      </div>
+      <div class="menu-container relative">
+        <button class="menu-trigger px-3 py-1 hover:bg-surface-container rounded-md text-on-surface-variant hover:text-on-surface">Selection</button>
+        <div class="menu-dropdown absolute left-0 top-full mt-1 bg-surface-container-high rounded-xl border border-outline-variant/20 py-1 min-w-[200px] shadow-xl z-50">
+          <button data-action="select-all" class="menu-item">Select All <span class="menu-kbd">Ctrl+A</span></button>
+          <button data-action="select-line" class="menu-item">Select Line <span class="menu-kbd">Ctrl+L</span></button>
+        </div>
+      </div>
+      <div class="menu-container relative">
+        <button class="menu-trigger px-3 py-1 hover:bg-surface-container rounded-md text-on-surface-variant hover:text-on-surface">View</button>
+        <div class="menu-dropdown absolute left-0 top-full mt-1 bg-surface-container-high rounded-xl border border-outline-variant/20 py-1 min-w-[200px] shadow-xl z-50">
+          <button data-action="toggle-terminal" class="menu-item">Toggle Terminal <span class="menu-kbd">Ctrl+`</span></button>
+          <button data-action="toggle-git" class="menu-item">Toggle Git Panel</button>
+          <button data-action="settings" class="menu-item">Settings <span class="menu-kbd">Ctrl+,</span></button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-3">
+      <button id="btnTerminal" class="p-1.5 text-on-surface-variant hover:text-on-surface" title="Toggle Terminal">
+        <span class="material-symbols-outlined text-lg">terminal</span>
+      </button>
+      <button id="btnSettings" class="p-1.5 text-on-surface-variant hover:text-on-surface" title="Settings">
+        <span class="material-symbols-outlined text-lg">settings</span>
+      </button>
+      <span class="text-on-surface-variant">v1.12.0</span>
+    </div>
+  </header>
+
+  <!-- ══════════ MAIN WORKSPACE ══════════ -->
+  <div class="flex h-[calc(100%-3rem-1.5rem)]">
+
+    <!-- Activity bar -->
+    <aside class="w-14 bg-surface-container-low flex flex-col items-center py-3 gap-1 shrink-0">
+      <button id="btnExplorer" class="rail-btn panel-active" title="Explorer">
+        <span class="material-symbols-outlined">folder</span>
+      </button>
+      <button id="btnSearch" class="rail-btn" title="Search">
+        <span class="material-symbols-outlined">search</span>
+      </button>
+      <button id="btnGit" class="rail-btn" title="Source Control">
+        <span class="material-symbols-outlined">commit</span>
+      </button>
+      <button id="btnChat" class="rail-btn" title="AI Chat">
+        <span class="material-symbols-outlined">auto_awesome</span>
+      </button>
+    </aside>
+
+    <!-- Sidebar panels -->
+    <aside class="w-72 bg-surface-container-low border-r border-outline-variant/10 shrink-0 flex flex-col">
+
+      <!-- Explorer panel -->
+      <div id="explorerPanel" class="side-panel flex flex-col h-full">
+        <div class="flex items-center justify-between px-3 h-8 text-xs uppercase tracking-wider text-on-surface-variant">
+          <span>Explorer</span>
+          <div class="flex gap-2">
+            <button id="btnNewFile" title="New File"><span class="material-symbols-outlined text-sm">note_add</span></button>
+            <button id="btnNewFolder" title="New Folder"><span class="material-symbols-outlined text-sm">create_new_folder</span></button>
+          </div>
+        </div>
+        <div id="fileTree" class="flex-1 overflow-y-auto custom-scrollbar text-sm py-1"></div>
+      </div>
+
+      <!-- Search panel -->
+      <div id="searchPanel" class="side-panel hidden flex-col h-full">
+        <div class="px-3 py-2 text-xs uppercase tracking-wider text-on-surface-variant">Search</div>
+        <div class="px-3">
+          <input id="searchInput" type="text" class="w-full bg-surface-container-high border-none rounded-lg py-2 px-3 text-xs focus:ring-1 focus:ring-primary text-on-surface" placeholder="Search in files..." />
+        </div>
+        <div id="searchResults" class="flex-1 overflow-y-auto custom-scrollbar text-xs mt-2"></div>
+      </div>
+
+      <!-- Git panel -->
+      <div id="gitPanel" class="side-panel hidden flex-col h-full">
+        <div class="px-3 py-2 text-xs uppercase tracking-wider text-on-surface-variant flex items-center justify-between">
+          <span>Source Control</span>
+          <button id="gitStageAll" class="text-[10px] text-primary hover:underline">Stage All</button>
+        </div>
+        <div class="px-3 text-xs text-on-surface-variant">
+          Branch: <span id="gitBranch" class="text-primary font-bold">main</span>
+          <span id="gitStaged" class="ml-2 text-on-surface-variant">0 staged</span>
+        </div>
+        <div id="gitChanges" class="flex-1 overflow-y-auto custom-scrollbar mt-2"></div>
+        <div class="p-3 border-t border-outline-variant/10">
+          <textarea id="gitCommitMessage" rows="2" class="w-full bg-surface-container-high border-none rounded-lg py-2 px-3 text-xs focus:ring-1 focus:ring-primary text-on-surface resize-none" placeholder="Commit message..."></textarea>
+          <button id="gitCommitBtn" class="w-full mt-2 bg-primary/20 text-primary py-1.5 rounded-lg text-xs hover:bg-primary/30">Commit</button>
+        </div>
+        <div class="border-t border-outline-variant/10">
+          <div class="px-3 py-2 text-[10px] uppercase tracking-wider text-on-surface-variant">Recent Commits</div>
+          <div id="gitLog" class="max-h-48 overflow-y-auto custom-scrollbar"></div>
+        </div>
+      </div>
+
+      <!-- Chat panel trigger reuses right chat -->
+      <div id="chatPanel" class="side-panel hidden flex-col h-full p-4 text-xs text-on-surface-variant">
+        Chat is shown in the right panel.
+      </div>
+    </aside>
+
+    <!-- Editor column -->
+    <section class="flex-1 flex flex-col min-w-0">
+      <!-- Tabs -->
+      <div id="editorTabs" class="flex bg-surface-container-low h-9 items-end px-2 overflow-x-auto custom-scrollbar"></div>
+
+      <!-- Find bar -->
+      <div id="findBar" class="hidden bg-surface-container-high border-b border-outline-variant/10 px-4 py-2 flex items-center gap-2">
+        <input id="findInput" type="text" class="bg-surface-container border-none rounded-lg py-1 px-3 text-xs w-64 focus:ring-1 focus:ring-primary text-on-surface" placeholder="Find..." />
+        <button id="findPrev" class="p-1 hover:bg-surface-bright rounded text-outline"><span class="material-symbols-outlined text-sm">arrow_upward</span></button>
+        <button id="findNext" class="p-1 hover:bg-surface-bright rounded text-outline"><span class="material-symbols-outlined text-sm">arrow_downward</span></button>
+        <span id="findCount" class="text-xs text-on-surface-variant">0 results</span>
+        <button id="findClose" class="p-1 hover:bg-surface-bright rounded text-outline ml-auto"><span class="material-symbols-outlined text-sm">close</span></button>
+      </div>
+
+      <!-- Welcome screen -->
+      <div id="welcomeScreen" class="flex-1 flex items-center justify-center">
+        <div class="text-center max-w-lg">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-3xl text-on-primary">code</span>
+          </div>
+          <h1 class="font-headline text-2xl font-bold text-on-surface">Neon Architect</h1>
+          <p class="text-on-surface-variant mt-2 text-sm">Your modular, keyboard-first code workspace with an AI pair programmer built in.</p>
+          <div class="flex gap-3 justify-center mt-6">
+            <button id="welcomeNewFile" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold hover:brightness-110">New File</button>
+            <button id="welcomeOpenReadme" class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs hover:bg-surface-container-highest">Open README</button>
+            <button id="welcomeAskAI" class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs hover:bg-surface-container-highest">Ask AI</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div id="editorWrapper" class="flex-1 overflow-auto custom-scrollbar font-mono text-[13px] hidden">
+        <div class="flex min-h-full">
+          <div id="lineNumbers" class="w-12 flex flex-col items-end pt-4 pr-3 text-outline/40 bg-surface/50 border-r border-outline-variant/5 select-none shrink-0"></div>
+          <textarea id="codeEditor" spellcheck="false" class="code-editor w-full h-full min-h-full bg-transparent border-none resize-none text-on-surface focus:ring-0 pt-4 pl-2"></textarea>
+        </div>
+      </div>
+
+      <!-- Terminal -->
+      <div id="terminalPanel" class="hidden border-t border-outline-variant/10 bg-surface-container-lowest">
+        <div class="flex items-center justify-between px-3 h-8 text-xs">
+          <div class="flex items-center gap-2 text-on-surface-variant">
+            <span class="material-symbols-outlined text-sm">terminal</span>
+            Terminal
+          </div>
+          <button id="terminalClose" class="p-1 hover:bg-surface-bright rounded text-outline"><span class="material-symbols-outlined text-sm">close</span></button>
+        </div>
+        <div id="termOutput" class="h-40 overflow-y-auto custom-scrollbar p-3 font-mono text-xs"></div>
+        <div class="flex items-center gap-2 px-3 py-2 border-t border-outline-variant/5 font-mono">
+          <span class="text-tertiary-dim text-xs">architect@neon:~$</span>
+          <input id="termInput" type="text" class="flex-1 bg-transparent border-none text-xs font-mono text-on-surface focus:ring-0 focus:outline-none" placeholder="Type a command..." />
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: AI Chat -->
+    <section class="w-80 bg-surface-container-low border-l border-outline-variant/10 shrink-0 flex flex-col">
+      <div class="p-3 border-b border-outline-variant/10">
+        <div class="flex items-center gap-2">
+          <span class="flex h-2 w-2 rounded-full bg-green-500"></span>
+          <span class="font-headline text-sm font-bold">AI Assistant</span>
+        </div>
+        <select id="modelSelect" class="w-full mt-2 bg-surface-container-high border-none rounded-lg py-2 px-3 text-xs focus:ring-1 focus:ring-primary text-on-surface">
+          <optgroup label="Cloud Providers">
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="claude-opus-4">Claude Opus 4</option>
+            <option value="claude-sonnet-4">Claude Sonnet 4</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            <option value="deepseek-chat">DeepSeek</option>
+          </optgroup>
+          <optgroup label="Local LLM">
+            <option value="ollama">Ollama</option>
+            <option value="lm_studio">LM Studio</option>
+            <option value="localai">LocalAI</option>
+            <option value="llamacpp">llama.cpp</option>
+            <option value="vllm">vLLM</option>
+            <option value="jan">Jan</option>
+          </optgroup>
+        </select>
+      </div>
+      <div id="chatMessages" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4"></div>
+      <div class="p-3 border-t border-outline-variant/10">
+        <div class="bg-surface-container-high rounded-xl p-2">
+          <textarea id="chatInput" rows="3" class="w-full bg-transparent border-none resize-none text-xs text-on-surface focus:ring-0 placeholder:text-outline/50" placeholder="Ask Architect..."></textarea>
+          <div class="flex items-center justify-end mt-1">
+            <button id="chatSend" class="bg-primary text-on-primary p-2 rounded-lg hover:brightness-110">
+              <span class="material-symbols-outlined text-sm">send</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Status bar -->
+  <footer class="h-6 bg-surface-container-low border-t border-outline-variant/10 flex items-center px-3 text-[11px] text-on-surface-variant gap-4">
+    <span class="flex items-center gap-1">
+      <span class="material-symbols-outlined text-xs">commit</span>
+      <span id="statusBranch">main</span>
+    </span>
+    <span>Errors: <span id="statusErrors">0</span></span>
+    <span>Warnings: <span id="statusWarnings">0</span></span>
+    <span class="ml-auto" id="statusLanguage">Plain Text</span>
+    <span id="statusIndent">Spaces: 2</span>
+    <span id="statusCursor">Ln 1, Col 1</span>
+  </footer>
+
+  <!-- Settings modal -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div id="settingsOverlay" class="absolute inset-0 bg-black/60"></div>
+    <div class="relative bg-surface-container-high rounded-2xl shadow-2xl w-96 p-5 border border-outline-variant/10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-headline font-bold text-on-surface">Settings</h2>
+        <button id="settingsClose" class="p-1 hover:bg-surface-bright rounded text-outline"><span class="material-symbols-outlined text-sm">close</span></button>
+      </div>
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="flex justify-between text-on-surface-variant mb-1">Font Size <span id="fontSizeLabel">14px</span></label>
+          <input id="settingFontSize" type="range" min="10" max="22" value="14" class="w-full accent-primary" />
+        </div>
+        <div>
+          <label class="block text-on-surface-variant mb-1">Tab Size</label>
+          <select id="settingTabSize" class="w-full bg-surface-container-low border-none rounded-lg py-2 px-3 text-xs text-on-surface">
+            <option value="2">2 spaces</option>
+            <option value="4">4 spaces</option>
+            <option value="8">8 spaces</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-2 text-on-surface-variant">
+          <input id="settingWordWrap" type="checkbox" class="rounded accent-primary" /> Word Wrap
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- App bootstrap -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

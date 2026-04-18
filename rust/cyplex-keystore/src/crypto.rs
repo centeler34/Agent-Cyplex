@@ -1,6 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
-use aes_gcm::{Aes256Gcm, AeadCore, Nonce};
-use rand::rngs::OsRng;
+use aes_gcm::{Aes256Gcm, Nonce};
+use rand::Rng;
 use argon2::{Algorithm, Argon2, Params, Version};
 
 use crate::error::KeystoreError;
@@ -16,7 +16,9 @@ pub fn encrypt_aes256gcm(plaintext: &[u8], key: &[u8]) -> Result<Vec<u8>, Keysto
     let cipher = Aes256Gcm::new_from_slice(key)
         .map_err(|e| KeystoreError::EncryptionFailed(e.to_string()))?;
 
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    let mut nonce_bytes = [0u8; 12];
+    rand::rng().fill(&mut nonce_bytes);
+    let nonce = Nonce::from(nonce_bytes);
 
     let ciphertext = cipher
         .encrypt(&nonce, plaintext)
@@ -77,10 +79,15 @@ pub fn derive_key_argon2id(password: &[u8], salt: &[u8]) -> Result<[u8; 32], Key
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::Rng;
+
+    fn generate_test_key() -> [u8; 32] {
+        rand::random::<[u8; 32]>()
+    }
 
     #[test]
     fn roundtrip_encrypt_decrypt() {
-        let key = [0xABu8; 32];
+        let key = generate_test_key();
         let plaintext = b"hello, cyplex keystore";
         let encrypted = encrypt_aes256gcm(plaintext, &key).unwrap();
         let decrypted = decrypt_aes256gcm(&encrypted, &key).unwrap();
@@ -98,8 +105,8 @@ mod tests {
 
     #[test]
     fn wrong_key_fails() {
-        let key = [0xABu8; 32];
-        let wrong_key = [0xCDu8; 32];
+        let key = generate_test_key();
+        let wrong_key = generate_test_key();
         let encrypted = encrypt_aes256gcm(b"secret", &key).unwrap();
         assert!(decrypt_aes256gcm(&encrypted, &wrong_key).is_err());
     }
