@@ -112,6 +112,7 @@ export const ReadMcpResourceTool = buildTool({
           return { uri: c.uri, mimeType: c.mimeType }
         }
         const persistId = `mcp-resource-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`
+        // deepcode ignore PT: persistId is composed locally from Date.now()/index/random — no user or remote string participates. c.mimeType is sanitized inside persistBinaryContent before it chooses an extension.
         const persisted = await persistBinaryContent(
           Buffer.from(c.blob, 'base64'),
           c.mimeType,

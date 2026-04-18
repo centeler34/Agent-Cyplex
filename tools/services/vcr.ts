@@ -45,8 +45,10 @@ async function withFixture<T>(
     return await f()
   }
 
-  // Create hash of input for fixture filename
-  const hash = createHash('sha1')
+  // Create hash of input for fixture filename. sha256 (truncated) keeps filename
+  // collisions astronomically unlikely and satisfies Snyk's no-weak-hash rule;
+  // the hash is used for cache-lookup only, never for auth or integrity.
+  const hash = createHash('sha256')
     .update(jsonStringify(input))
     .digest('hex')
     .slice(0, 12)
@@ -111,7 +113,7 @@ export async function withVCR(
   )
   const filename = join(
     process.env.CLAUDE_CODE_TEST_FIXTURES_ROOT ?? getCwd(),
-    `fixtures/${dehydratedInput.map(_ => createHash('sha1').update(jsonStringify(_)).digest('hex').slice(0, 6)).join('-')}.json`,
+    `fixtures/${dehydratedInput.map(_ => createHash('sha256').update(jsonStringify(_)).digest('hex').slice(0, 6)).join('-')}.json`,
   )
 
   // Fetch cached fixture

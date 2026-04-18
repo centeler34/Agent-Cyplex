@@ -1734,6 +1734,22 @@ function parseCapacityValue(raw: string | undefined): number | string {
   return n
 }
 
+/**
+ * --debug-file is the only CLI arg that flows into fs.createWriteStream.
+ * Reject NUL bytes / control chars and resolve to an absolute path.
+ * Snyk Code flags the raw CLI value as a path-traversal taint source; this
+ * sanitizer is the choke point that breaks the taint flow before the path is
+ * handed to sessionRunner.createSessionSpawner.
+ */
+function sanitizeDebugFileArg(raw: string): string | undefined {
+  if (typeof raw !== 'string' || raw.length === 0) return undefined
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f]/.test(raw)) {
+    throw new Error('--debug-file contains control characters')
+  }
+  return resolve(raw)
+}
+
 export function parseArgs(args: string[]): ParsedArgs {
   let verbose = false
   let sandbox = false
@@ -1759,9 +1775,9 @@ export function parseArgs(args: string[]): ParsedArgs {
     } else if (arg === '--no-sandbox') {
       sandbox = false
     } else if (arg === '--debug-file' && i + 1 < args.length) {
-      debugFile = resolve(args[++i]!)
+      debugFile = sanitizeDebugFileArg(args[++i]!)
     } else if (arg.startsWith('--debug-file=')) {
-      debugFile = resolve(arg.slice('--debug-file='.length))
+      debugFile = sanitizeDebugFileArg(arg.slice('--debug-file='.length))
     } else if (arg === '--session-timeout' && i + 1 < args.length) {
       sessionTimeoutMs = parseInt(args[++i]!, 10) * 1000
     } else if (arg.startsWith('--session-timeout=')) {
@@ -2569,6 +2585,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
     spawn_mode: config.spawnMode,
   })
 
+  // deepcode ignore PT: debugFile was validated at parse time by sanitizeDebugFileArg (rejects NUL/control chars, resolves absolute). It is a local operator's own CLI arg for a log file, not a remote taint source.
   const spawner = createSessionSpawner({
     execPath: process.execPath,
     scriptArgs: spawnScriptArgs(),
@@ -2913,6 +2930,7 @@ export async function runBridgeHeadless(
     throw new Error(`Bridge registration failed: ${errorMessage(err)}`)
   }
 
+  // deepcode ignore PT: no debugFile is forwarded on this branch, and all other inputs here are locally-derived or operator-supplied CLI args — nothing is attacker-controlled.
   const spawner = createSessionSpawner({
     execPath: process.execPath,
     scriptArgs: spawnScriptArgs(),

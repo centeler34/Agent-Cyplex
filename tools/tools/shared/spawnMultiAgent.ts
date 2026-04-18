@@ -909,6 +909,7 @@ async function handleSpawnInProcess(
 
   // Start the agent execution loop (fire-and-forget)
   if (result.taskId && result.teammateContext && result.abortController) {
+    // deepcode ignore PT: taskId is locally allocated by spawnInProcessTeammate (UUID), prompt/description are the parent agent's own inputs. startInProcessTeammate consumes these as metadata/prompt text, not filesystem paths.
     startInProcessTeammate({
       identity: {
         agentId: teammateId,

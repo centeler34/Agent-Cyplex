@@ -120,11 +120,19 @@ export async function fetchOfficialMarketplaceFromGcs(
     const staging = `${installLocation}.staging`
     await rm(staging, { recursive: true, force: true })
     await mkdir(staging, { recursive: true })
+    const stagingAbs = resolve(staging)
     for (const [arcPath, data] of Object.entries(files)) {
       if (!arcPath.startsWith(ARC_PREFIX)) continue
       const rel = arcPath.slice(ARC_PREFIX.length)
       if (!rel || rel.endsWith('/')) continue // prefix dir entry or subdir entry
-      const dest = join(staging, rel)
+      // Zip-slip guard: the zip's central directory is attacker-controlled (we
+      // fetched it from GCS keyed by a content-addressed sha, but a compromised
+      // bucket could still serve a zip with `../../evil` entries). Make sure
+      // every extracted path stays inside stagingAbs before any fs write.
+      const dest = resolve(stagingAbs, rel)
+      if (dest !== stagingAbs && !dest.startsWith(stagingAbs + sep)) {
+        throw new Error(`Refusing to extract entry outside staging: ${JSON.stringify(rel)}`)
+      }
       await mkdir(dirname(dest), { recursive: true })
       await writeFile(dest, data)
       const mode = modes[arcPath]

@@ -150,6 +150,7 @@ function getAutoModeDumpDir(): string {
  * claude temp directory when CLAUDE_CODE_DUMP_AUTO_MODE is set. Files are
  * named by unix timestamp: {timestamp}[.{suffix}].req.json and .res.json
  */
+// deepcode ignore NoRateLimitingForExpensiveWebOperation: this is not a web endpoint. It is an internal debug dumper that writes to a local per-user temp dir, gated twice over: USER_TYPE==='ant' AND an opt-in env var CLAUDE_CODE_DUMP_AUTO_MODE. Only the operator triggers it; there is no external caller to rate-limit.
 async function maybeDumpAutoMode(
   request: unknown,
   response: unknown,

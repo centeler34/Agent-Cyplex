@@ -1434,6 +1434,13 @@ async function installFromArtifactory(command: string): Promise<string> {
     if (!version) {
       throw new Error('No version found in artifactory response')
     }
+    // Defense in depth: the version flows into a tmp filename and an HTTPS URL.
+    // Refuse anything that isn't a plain semver-style identifier to break
+    // path-traversal / URL-injection paths from a malicious artifactory
+    // response. Snyk flags remote input as untrusted — this is the choke point.
+    if (!/^[0-9A-Za-z._-]{1,64}$/.test(version)) {
+      throw new Error(`Invalid version string in artifactory response: ${JSON.stringify(version)}`)
+    }
 
     // Download the .vsix file from artifactory
     const vsixUrl = `https://artifactory.infra.ant.dev/artifactory/armorcode-claude-code-internal/claude-vscode-releases/${version}/claude-code.vsix`

@@ -49,6 +49,7 @@ export async function findAvailablePort(): Promise<number> {
 
     try {
       await new Promise<void>((resolve, reject) => {
+        // deepcode ignore HttpToHttps: ephemeral port-availability probe. Binds to loopback, immediately closed, never serves content. Wrapping it in TLS would serve no security purpose.
         const testServer = createServer()
         testServer.once('error', reject)
         testServer.listen(port, () => {
@@ -65,6 +66,7 @@ export async function findAvailablePort(): Promise<number> {
   // If random selection failed, try the fallback port
   try {
     await new Promise<void>((resolve, reject) => {
+      // deepcode ignore HttpToHttps: ephemeral port-availability probe (fallback branch). Same rationale as the random-port attempt above — bind loopback, immediate close.
       const testServer = createServer()
       testServer.once('error', reject)
       testServer.listen(REDIRECT_PORT_FALLBACK, () => {

@@ -105,7 +105,9 @@ function getMcpbCacheDir(pluginPath: string): string {
  * Get metadata file path for cached MCPB
  */
 function getMetadataPath(cacheDir: string, source: string): string {
-  const sourceHash = createHash('md5')
+  // sha256 (truncated) is used purely as a cache-filename deduper; swap off
+  // md5 so Snyk's no-weak-hash rule doesn't flag it. No security boundary here.
+  const sourceHash = createHash('sha256')
     .update(source)
     .digest('hex')
     .substring(0, 8)
@@ -799,8 +801,9 @@ export async function loadMcpbFile(
   let mcpbFilePath: string
 
   if (isUrl(source)) {
-    // Download from URL
-    const sourceHash = createHash('md5')
+    // Download from URL. Use sha256 (truncated) for the cache filename; this is
+    // a deduplication key, not an integrity check, but sha256 keeps Snyk happy.
+    const sourceHash = createHash('sha256')
       .update(source)
       .digest('hex')
       .substring(0, 8)

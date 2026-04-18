@@ -1096,6 +1096,7 @@ export async function performMCPOAuthFlow(
         })
       }
 
+      // deepcode ignore HttpToHttps: RFC 8252 section 7.3 mandates that native apps use an http://127.0.0.1 loopback redirect URI for OAuth. Self-signed TLS here would break the browser round-trip and is explicitly not recommended. This listener binds to loopback only.
       server = createServer((req, res) => {
         const parsedUrl = parse(req.url || '', true)
 

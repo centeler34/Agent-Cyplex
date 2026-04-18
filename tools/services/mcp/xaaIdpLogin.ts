@@ -317,6 +317,7 @@ function waitForCallback(
       abortSignal.addEventListener('abort', abortHandler, { once: true })
     }
 
+    // deepcode ignore HttpToHttps: RFC 8252 loopback OAuth callback. Listener binds to 127.0.0.1 for a single /callback round-trip from the user's own browser. Self-signed TLS would be strictly worse (browser cert warnings, no added secrecy on loopback).
     server = createServer((req, res) => {
       const parsed = parse(req.url || '', true)
       if (parsed.pathname !== '/callback') {

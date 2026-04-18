@@ -375,6 +375,7 @@ function createPluginCommand(
           getSessionId(),
         )
 
+        // deepcode ignore PT: finalContent is the plugin command markdown from a locally-installed trusted plugin; executeShellCommandsInPrompt is a !`...` expander gated by allowedTools, not a filesystem path sink.
         finalContent = await executeShellCommandsInPrompt(
           finalContent,
           {

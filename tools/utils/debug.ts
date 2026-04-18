@@ -172,6 +172,7 @@ function getDebugWriter(): BufferedWriter {
               // Directory already exists
             }
           }
+          // deepcode ignore PT: `path` is `getDebugLogPath()`, which returns either $CLAUDE_CODE_DEBUG_LOGS_DIR (a trusted local operator env var) or a fixed path under the config home joined with the locally-generated sessionId. Never attacker-controlled.
           getFsImplementation().appendFileSync(path, content)
           void updateLatestDebugLogSymlink()
           return
@@ -245,6 +246,7 @@ const updateLatestDebugLogSymlink = memoize(async (): Promise<void> => {
     const debugLogsDir = dirname(debugLogPath)
     const latestSymlinkPath = join(debugLogsDir, 'latest')
 
+    // deepcode ignore PT: latestSymlinkPath is dirname(debugLogPath) joined with the fixed literal 'latest'. Its components trace back to getDebugLogPath() (operator env var or config-home + sessionId) and can't be attacker-controlled.
     await unlink(latestSymlinkPath).catch(() => {})
     await symlink(debugLogPath, latestSymlinkPath)
   } catch {
