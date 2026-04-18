@@ -4,7 +4,7 @@
  * file open, context menus, and new file/folder creation.
  */
 
-import { $, getLangFromName, getFileIcon, showToast, bus } from './utils.js';
+import { $, getLangFromName, getFileIcon, showToast, bus, escapeHtml } from './utils.js';
 import { fileSystem, getNode, setNode, deleteNode, fileContents, dirty } from './filesystem.js';
 import { openFile, closeTab, getOpenTabs } from './tabs.js';
 import { getActiveTab, setActiveTab } from './editor.js';
@@ -37,7 +37,7 @@ function renderDir(node, parentPath, depth) {
       el.innerHTML = `
         <span class="material-symbols-outlined text-sm">${child._expanded ? 'expand_more' : 'chevron_right'}</span>
         <span class="material-symbols-outlined text-sm">${child._expanded ? 'folder_open' : 'folder'}</span>
-        <span class="flex-1">${name}</span>
+        <span class="flex-1">${escapeHtml(name)}</span>
       `;
       el.addEventListener('click', () => {
         child._expanded = !child._expanded;
@@ -63,7 +63,7 @@ function renderDir(node, parentPath, depth) {
       el.style.paddingLeft = `${depth * 16 + 32}px`;
       el.innerHTML = `
         <span class="material-symbols-outlined text-sm ${color}">${icon}</span>
-        <span class="flex-1">${name}</span>
+        <span class="flex-1">${escapeHtml(name)}</span>
         ${isDirty ? '<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>' : ''}
       `;
       el.addEventListener('click', () => {
