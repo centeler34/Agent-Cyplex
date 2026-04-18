@@ -163,7 +163,7 @@ io.on('connection', (socket: import("socket.io").Socket) => {
     });
 
     let buffer = Buffer.alloc(0);
-    client.on('data', (data) => {
+    client.on('data', (data: Buffer) => {
       buffer = Buffer.concat([buffer, data]);
 
       while (buffer.length >= 4) {
