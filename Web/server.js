@@ -5,12 +5,14 @@
  * (file:// breaks import statements).
  *
  * Usage:
- *   node server.js              # default port 7777
+ *   node server.js              # default port 7777, loopback only
  *   node server.js 3000         # custom port
  *   PORT=8080 node server.js
+ *   HTTPS_KEY=./key.pem HTTPS_CERT=./cert.pem node server.js   # TLS
  */
 
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +41,8 @@ const MIME = {
   '.txt':  'text/plain; charset=utf-8',
 };
 
+const ALLOWED_EXT = new Set(Object.keys(MIME));
+
 function safeResolve(urlPath) {
   const decoded = decodeURIComponent(urlPath.split('?')[0].split('#')[0]);
   const resolved = path.normalize(path.join(ROOT, decoded));
@@ -46,41 +50,95 @@ function safeResolve(urlPath) {
   return resolved;
 }
 
-const server = http.createServer((req, res) => {
-  let urlPath = req.url === '/' ? '/index.html' : req.url;
+// Token-bucket rate limiter keyed by remote IP. Bound to loopback by default,
+// but added anyway so a misconfigured HOST=0.0.0.0 can't be DoS'd into the fs.
+const RATE_CAPACITY = parseInt(process.env.RATE_CAPACITY || '60', 10);   // burst
+const RATE_REFILL_PER_SEC = parseInt(process.env.RATE_REFILL_PER_SEC || '30', 10);
+const buckets = new Map();
+function takeToken(ip) {
+  const now = Date.now();
+  let b = buckets.get(ip);
+  if (!b) { b = { tokens: RATE_CAPACITY, ts: now }; buckets.set(ip, b); }
+  const elapsed = (now - b.ts) / 1000;
+  b.tokens = Math.min(RATE_CAPACITY, b.tokens + elapsed * RATE_REFILL_PER_SEC);
+  b.ts = now;
+  if (b.tokens < 1) return false;
+  b.tokens -= 1;
+  return true;
+}
+setInterval(() => {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  for (const [ip, b] of buckets) if (b.ts < cutoff) buckets.delete(ip);
+}, 60_000).unref();
+
+function sendStatus(res, code, message) {
+  // Never echo client-controlled input into the body — it's a reflected-XSS
+  // sink even with text/plain because of browser sniffing. Fixed strings only.
+  res.writeHead(code, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store',
+  });
+  res.end(message);
+}
+
+function handler(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return sendStatus(res, 405, 'Method Not Allowed');
+  }
+
+  const ip = req.socket.remoteAddress || 'unknown';
+  if (!takeToken(ip)) return sendStatus(res, 429, 'Too Many Requests');
+
+  const urlPath = req.url === '/' ? '/index.html' : req.url;
   let filePath = safeResolve(urlPath);
-  if (!filePath) { res.writeHead(403); res.end('Forbidden'); return; }
+  if (!filePath) return sendStatus(res, 403, 'Forbidden');
 
   fs.stat(filePath, (err, stat) => {
-    if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end(`404 Not Found: ${urlPath}`);
-      return;
-    }
+    if (err) return sendStatus(res, 404, 'Not Found');
+
     if (stat.isDirectory()) {
       filePath = path.join(filePath, 'index.html');
     }
 
+    const ext = path.extname(filePath).toLowerCase();
+    if (!ALLOWED_EXT.has(ext)) return sendStatus(res, 404, 'Not Found');
+
     fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(500);
-        res.end('Server error');
-        return;
-      }
-      const ext = path.extname(filePath).toLowerCase();
-      const type = MIME[ext] || 'application/octet-stream';
+      if (err) return sendStatus(res, 500, 'Server error');
+      const type = MIME[ext];
       res.writeHead(200, {
         'Content-Type': type,
         'Cache-Control': 'no-cache',
         'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer',
       });
+      if (req.method === 'HEAD') return res.end();
       res.end(data);
     });
   });
-});
+}
+
+const HTTPS_KEY = process.env.HTTPS_KEY;
+const HTTPS_CERT = process.env.HTTPS_CERT;
+
+let server;
+let scheme = 'http';
+if (HTTPS_KEY && HTTPS_CERT) {
+  server = https.createServer(
+    { key: fs.readFileSync(HTTPS_KEY), cert: fs.readFileSync(HTTPS_CERT) },
+    handler,
+  );
+  scheme = 'https';
+} else {
+  // Intentional plain HTTP: the server binds to 127.0.0.1 by default and
+  // exists only to serve the static Web/ bundle to the user's own browser
+  // (ES modules break over file://). Set HTTPS_KEY/HTTPS_CERT to enable TLS.
+  server = http.createServer(handler);
+}
 
 server.listen(PORT, HOST, () => {
-  const url = `http://${HOST}:${PORT}/`;
+  const url = `${scheme}://${HOST}:${PORT}/`;
   console.log('');
   console.log('  \x1b[36m┌──────────────────────────────────────────┐\x1b[0m');
   console.log('  \x1b[36m│\x1b[0m  \x1b[1mNeon Architect — Web GUI\x1b[0m                \x1b[36m│\x1b[0m');
