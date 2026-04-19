@@ -15,6 +15,17 @@ const fileTree = $('fileTree');
 /** Render the entire file tree */
 export function renderFileTree() {
   fileTree.innerHTML = '';
+  const hasEntries = Object.keys(fileSystem).some(k => !k.startsWith('_'));
+  if (!hasEntries) {
+    const empty = document.createElement('div');
+    empty.className = 'text-on-surface-variant/60 text-xs italic select-none px-4 py-6 leading-relaxed';
+    empty.innerHTML = `
+      <div class="mb-2">No files open</div>
+      <div class="opacity-70">Use <span class="font-mono">New File</span> or open a file from the terminal — its folder will appear here.</div>
+    `;
+    fileTree.appendChild(empty);
+    return;
+  }
   renderDir(fileSystem, '', 0);
 }
 
