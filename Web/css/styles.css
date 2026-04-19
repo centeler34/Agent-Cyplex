@@ -3,8 +3,9 @@
    Design system: "The Neon Architect" — High-Tech Editorial AI
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── CSS Custom Properties ────────────────────────────────────────────── */
-:root {
+/* ── CSS Custom Properties — Dark Palette (default) ───────────────────── */
+:root,
+html.dark {
   --surface: #0c0e17;
   --surface-dim: #0c0e17;
   --surface-bright: #282b3a;
@@ -14,6 +15,7 @@
   --surface-container-high: #1c1f2b;
   --surface-container-highest: #222532;
   --surface-variant: #222532;
+  --background: #0c0e17;
 
   --primary: #9ba8ff;
   --primary-dim: #4963ff;
@@ -35,6 +37,7 @@
   --error: #ff6e84;
   --error-dim: #d73357;
   --error-container: #a70138;
+  --on-error: #490013;
 
   --on-surface: #f0f0fd;
   --on-surface-variant: #aaaab7;
@@ -42,6 +45,70 @@
 
   --outline: #737580;
   --outline-variant: #464752;
+
+  --syntax-keyword: #cabaff;
+  --syntax-string: #f98fdc;
+  --syntax-function: #9ba8ff;
+  --syntax-comment: #737580;
+  --syntax-bracket: #aaaab7;
+  --syntax-number: #ff6e84;
+  --syntax-type: #ffa4e4;
+  --syntax-tag: #9ba8ff;
+}
+
+/* ── Light Palette ────────────────────────────────────────────────────── */
+html.light {
+  --surface: #faf8ff;
+  --surface-dim: #e0def0;
+  --surface-bright: #ffffff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f0fa;
+  --surface-container: #ebe9f4;
+  --surface-container-high: #e5e3ee;
+  --surface-container-highest: #dfdde8;
+  --surface-variant: #e3e1ec;
+  --background: #faf8ff;
+
+  --primary: #3b4bcc;
+  --primary-dim: #1f2b9e;
+  --primary-container: #dde1ff;
+  --primary-fixed: #dde1ff;
+  --primary-fixed-dim: #b9c0ff;
+  --on-primary: #ffffff;
+
+  --secondary: #5a3fe0;
+  --secondary-dim: #3f29b5;
+  --secondary-container: #e4dbff;
+  --on-secondary: #ffffff;
+
+  --tertiary: #a8208a;
+  --tertiary-dim: #7d0c66;
+  --tertiary-container: #ffd8ef;
+  --on-tertiary: #ffffff;
+
+  --error: #b3261e;
+  --error-dim: #8c1d17;
+  --error-container: #ffdad6;
+  --on-error: #ffffff;
+
+  --on-surface: #1a1b26;
+  --on-surface-variant: #45464f;
+  --on-background: #1a1b26;
+
+  --outline: #75757e;
+  --outline-variant: #c5c4d0;
+
+  --syntax-keyword: #5a3fe0;
+  --syntax-string: #a8208a;
+  --syntax-function: #1f2b9e;
+  --syntax-comment: #75757e;
+  --syntax-bracket: #45464f;
+  --syntax-number: #b3261e;
+  --syntax-type: #7d0c66;
+  --syntax-tag: #3b4bcc;
+}
+
+:root {
 
   --font-headline: 'Space Grotesk', sans-serif;
   --font-body: 'Manrope', sans-serif;
@@ -79,17 +146,17 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--outline); }
 
 /* ── Syntax Highlighting ──────────────────────────────────────────────── */
-.syntax-keyword { color: #cabaff; }
-.syntax-string { color: #f98fdc; }
-.syntax-function { color: #9ba8ff; }
-.syntax-comment { color: #737580; font-style: italic; }
-.syntax-bracket { color: #aaaab7; }
-.syntax-number { color: #ff6e84; }
-.syntax-type { color: #ffa4e4; }
-.syntax-tag { color: #9ba8ff; }
-.syntax-attr { color: #cabaff; }
-.syntax-operator { color: #ff6e84; }
-.syntax-property { color: #9ba8ff; }
+.syntax-keyword { color: var(--syntax-keyword); }
+.syntax-string { color: var(--syntax-string); }
+.syntax-function { color: var(--syntax-function); }
+.syntax-comment { color: var(--syntax-comment); font-style: italic; }
+.syntax-bracket { color: var(--syntax-bracket); }
+.syntax-number { color: var(--syntax-number); }
+.syntax-type { color: var(--syntax-type); }
+.syntax-tag { color: var(--syntax-tag); }
+.syntax-attr { color: var(--syntax-keyword); }
+.syntax-operator { color: var(--syntax-number); }
+.syntax-property { color: var(--syntax-function); }
 
 /* ── Code Editor ──────────────────────────────────────────────────────── */
 .code-editor {

@@ -15,6 +15,8 @@ import { toggleSearchPanel, runSearch } from './search.js';
 import { toggleSettings } from './settings.js';
 import { renderGit, toggleGitPanel } from './git.js';
 import { getShortcuts } from './shortcuts.js';
+import { openLocalFiles, openLocalFolder } from './localfs.js';
+import { toggleTheme } from './theme.js';
 import './panels.js';
 import './menus.js';
 
@@ -39,6 +41,8 @@ function wireGlobalActions() {
   // File menu actions
   bus.on('action:new-file', () => promptNewFile());
   bus.on('action:new-folder', () => promptNewFolder());
+  bus.on('action:open-file', () => openLocalFiles());
+  bus.on('action:open-folder', () => openLocalFolder());
   bus.on('action:save', () => {
     const path = getActiveTab();
     if (!path) return showToast('No file open', 'warning');
@@ -76,6 +80,7 @@ function wireGlobalActions() {
   // View menu
   bus.on('action:toggle-terminal', toggleTerminal);
   bus.on('action:toggle-git', toggleGitPanel);
+  bus.on('action:toggle-theme', toggleTheme);
   bus.on('action:settings', toggleSettings);
 
   // Terminal opens file → route through tabs
@@ -100,7 +105,8 @@ function wireGlobalActions() {
 
 function wireWelcomeButtons() {
   $('welcomeNewFile')?.addEventListener('click', () => promptNewFile());
-  $('welcomeOpenReadme')?.addEventListener('click', () => promptNewFile());
+  $('welcomeOpenFile')?.addEventListener('click', () => openLocalFiles());
+  $('welcomeOpenFolder')?.addEventListener('click', () => openLocalFolder());
   $('welcomeAskAI')?.addEventListener('click', () => $('chatInput')?.focus());
 }
 
@@ -128,7 +134,7 @@ window.NeonArchitect = {
   processCommand,
   runSearch,
   getShortcuts,
-  version: '1.12.9',
+  version: '1.13.0',
 };
 
 // Go!
