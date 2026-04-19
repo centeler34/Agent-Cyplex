@@ -155,7 +155,7 @@
       <button id="btnSettings" class="p-1.5 text-on-surface-variant hover:text-on-surface" title="Settings">
         <span class="material-symbols-outlined text-lg">settings</span>
       </button>
-      <span class="text-on-surface-variant">v1.13.1</span>
+      <span class="text-on-surface-variant">v1.13.2</span>
     </div>
   </header>
 
@@ -263,11 +263,9 @@
       </div>
 
       <!-- Editor -->
-      <div id="editorWrapper" class="flex-1 overflow-auto custom-scrollbar font-mono text-[13px] hidden">
-        <div class="flex min-h-full">
-          <div id="lineNumbers" class="w-12 flex flex-col items-end pt-4 pr-3 text-outline/40 bg-surface/50 border-r border-outline-variant/5 select-none shrink-0"></div>
-          <textarea id="codeEditor" spellcheck="false" class="code-editor w-full h-full min-h-full bg-transparent border-none resize-none text-on-surface focus:ring-0 pt-4 pl-2"></textarea>
-        </div>
+      <div id="editorWrapper" class="flex-1 min-h-0 flex font-mono text-[13px] hidden">
+        <div id="lineNumbers" class="line-numbers w-12 pt-4 pr-3 text-outline/40 bg-surface/50 border-r border-outline-variant/5 select-none shrink-0 overflow-hidden"></div>
+        <textarea id="codeEditor" spellcheck="false" class="code-editor flex-1 min-w-0 bg-transparent border-none resize-none text-on-surface focus:ring-0 pt-4 pl-2 custom-scrollbar"></textarea>
       </div>
 
       <!-- Terminal -->

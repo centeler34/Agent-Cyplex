@@ -39,12 +39,13 @@ export function showWelcome() {
   $('statusCursor').textContent = '';
 }
 
-/** Update line number gutter */
+/** Update line number gutter. Each row uses the editor's line-height so the
+ *  gutter stays aligned with the textarea's rendered rows at any font size. */
 export function updateLineNumbers() {
   const lines = codeEditor.value.split('\n').length;
   let html = '';
   for (let i = 1; i <= lines; i++) {
-    html += `<div class="h-6 text-right">${i}</div>`;
+    html += `<div class="text-right leading-[inherit]">${i}</div>`;
   }
   lineNumbers.innerHTML = html;
 }
@@ -186,9 +187,13 @@ $('findPrev')?.addEventListener('click', () => {
 // ── Settings Integration ─────────────────────────────────────────────────
 $('settingFontSize')?.addEventListener('input', () => {
   const size = $('settingFontSize').value;
+  const lh = `${Math.round(size * 1.6)}px`;
   $('fontSizeLabel').textContent = `${size}px`;
   codeEditor.style.fontSize = `${size}px`;
-  codeEditor.style.lineHeight = `${Math.round(size * 1.6)}px`;
+  codeEditor.style.lineHeight = lh;
+  // Keep the gutter in lock-step so row N of the numbers aligns with row N of the text.
+  lineNumbers.style.fontSize = `${size}px`;
+  lineNumbers.style.lineHeight = lh;
 });
 
 $('settingTabSize')?.addEventListener('change', updateStatusBar);

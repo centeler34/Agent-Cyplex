@@ -134,7 +134,7 @@ window.NeonArchitect = {
   processCommand,
   runSearch,
   getShortcuts,
-  version: '1.13.1',
+  version: '1.13.2',
 };
 
 // Go!
