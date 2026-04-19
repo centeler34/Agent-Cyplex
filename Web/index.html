@@ -6,7 +6,20 @@
   <title>Neon Architect | Workspace</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%23111827%22%2F%3E%3Cpath%20d%3D%22M18%2044%20L32%2020%20L46%2044%20Z%22%20fill%3D%22none%22%20stroke%3D%22%2300e5ff%22%20stroke-width%3D%223%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E" />
 
-  <!-- Tailwind with theme tokens -->
+  <!-- Apply stored theme before first paint to avoid a flash-of-wrong-mode -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('neon-theme');
+        const mode = saved === 'light' ? 'light' : 'dark';
+        document.documentElement.classList.toggle('dark', mode === 'dark');
+        document.documentElement.classList.toggle('light', mode === 'light');
+      } catch { /* localStorage may be disabled — default HTML class stays */ }
+    })();
+  </script>
+
+  <!-- Tailwind with theme tokens. Color utilities reference CSS variables so
+       they flip when the <html> class changes between 'dark' and 'light'. -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script>
     tailwind.config = {
@@ -14,41 +27,41 @@
       theme: {
         extend: {
           colors: {
-            "tertiary-dim": "#ea82ce",
-            "surface-tint": "#9ba8ff",
-            "on-primary": "#001c8e",
-            "error-dim": "#d73357",
-            "surface-container": "#171924",
-            "on-primary-container": "#001470",
-            "secondary-dim": "#7e51ff",
-            "surface-container-lowest": "#000000",
-            "surface": "#0c0e17",
-            "on-background": "#f0f0fd",
-            "primary-fixed-dim": "#778aff",
-            "surface-container-low": "#11131d",
-            "on-primary-fixed": "#000000",
-            "surface-dim": "#0c0e17",
-            "surface-variant": "#222532",
-            "surface-bright": "#282b3a",
-            "on-primary-fixed-variant": "#001a88",
-            "primary": "#9ba8ff",
-            "outline": "#737580",
-            "tertiary": "#ffa4e4",
-            "primary-dim": "#4963ff",
-            "surface-container-high": "#1c1f2b",
-            "on-surface": "#f0f0fd",
-            "background": "#0c0e17",
-            "inverse-on-surface": "#53545f",
-            "error": "#ff6e84",
-            "secondary-container": "#591adc",
-            "on-error-container": "#ffb2b9",
-            "error-container": "#a70138",
-            "on-error": "#490013",
-            "secondary": "#a68cff",
-            "surface-container-highest": "#222532",
-            "outline-variant": "#464752",
-            "primary-container": "#8999ff",
-            "on-surface-variant": "#aaaab7",
+            "tertiary-dim": "var(--tertiary-dim)",
+            "surface-tint": "var(--primary)",
+            "on-primary": "var(--on-primary)",
+            "error-dim": "var(--error-dim)",
+            "surface-container": "var(--surface-container)",
+            "on-primary-container": "var(--on-primary-container, var(--on-primary))",
+            "secondary-dim": "var(--secondary-dim)",
+            "surface-container-lowest": "var(--surface-container-lowest)",
+            "surface": "var(--surface)",
+            "on-background": "var(--on-background)",
+            "primary-fixed-dim": "var(--primary-fixed-dim)",
+            "surface-container-low": "var(--surface-container-low)",
+            "on-primary-fixed": "var(--on-primary-fixed, var(--on-primary))",
+            "surface-dim": "var(--surface-dim)",
+            "surface-variant": "var(--surface-variant)",
+            "surface-bright": "var(--surface-bright)",
+            "on-primary-fixed-variant": "var(--on-primary-fixed-variant, var(--on-primary))",
+            "primary": "var(--primary)",
+            "outline": "var(--outline)",
+            "tertiary": "var(--tertiary)",
+            "primary-dim": "var(--primary-dim)",
+            "surface-container-high": "var(--surface-container-high)",
+            "on-surface": "var(--on-surface)",
+            "background": "var(--background, var(--surface))",
+            "inverse-on-surface": "var(--inverse-on-surface, var(--on-surface))",
+            "error": "var(--error)",
+            "secondary-container": "var(--secondary-container)",
+            "on-error-container": "var(--on-error-container, var(--on-error))",
+            "error-container": "var(--error-container)",
+            "on-error": "var(--on-error)",
+            "secondary": "var(--secondary)",
+            "surface-container-highest": "var(--surface-container-highest)",
+            "outline-variant": "var(--outline-variant)",
+            "primary-container": "var(--primary-container)",
+            "on-surface-variant": "var(--on-surface-variant)",
           },
           borderRadius: { DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem" },
           fontFamily: {
@@ -93,6 +106,8 @@
         <div class="menu-dropdown absolute left-0 top-full mt-1 bg-surface-container-high rounded-xl border border-outline-variant/20 py-1 min-w-[200px] shadow-xl z-50">
           <button data-action="new-file" class="menu-item">New File <span class="menu-kbd">Ctrl+N</span></button>
           <button data-action="new-folder" class="menu-item">New Folder</button>
+          <button data-action="open-file" class="menu-item">Open File...</button>
+          <button data-action="open-folder" class="menu-item">Open Folder...</button>
           <div class="menu-separator"></div>
           <button data-action="save" class="menu-item">Save <span class="menu-kbd">Ctrl+S</span></button>
           <button data-action="save-all" class="menu-item">Save All</button>
@@ -124,19 +139,23 @@
         <div class="menu-dropdown absolute left-0 top-full mt-1 bg-surface-container-high rounded-xl border border-outline-variant/20 py-1 min-w-[200px] shadow-xl z-50">
           <button data-action="toggle-terminal" class="menu-item">Toggle Terminal <span class="menu-kbd">Ctrl+`</span></button>
           <button data-action="toggle-git" class="menu-item">Toggle Git Panel</button>
+          <button data-action="toggle-theme" class="menu-item">Toggle Dark / Light</button>
           <button data-action="settings" class="menu-item">Settings <span class="menu-kbd">Ctrl+,</span></button>
         </div>
       </div>
     </nav>
 
     <div class="ml-auto flex items-center gap-3">
+      <button id="btnTheme" class="p-1.5 text-on-surface-variant hover:text-on-surface" title="Toggle Dark / Light">
+        <span class="material-symbols-outlined text-lg" id="btnThemeIcon">dark_mode</span>
+      </button>
       <button id="btnTerminal" class="p-1.5 text-on-surface-variant hover:text-on-surface" title="Toggle Terminal">
         <span class="material-symbols-outlined text-lg">terminal</span>
       </button>
       <button id="btnSettings" class="p-1.5 text-on-surface-variant hover:text-on-surface" title="Settings">
         <span class="material-symbols-outlined text-lg">settings</span>
       </button>
-      <span class="text-on-surface-variant">v1.12.0</span>
+      <span class="text-on-surface-variant">v1.13.0</span>
     </div>
   </header>
 
@@ -167,6 +186,8 @@
         <div class="flex items-center justify-between px-3 h-8 text-xs uppercase tracking-wider text-on-surface-variant">
           <span>Explorer</span>
           <div class="flex gap-2">
+            <button id="btnOpenFiles" title="Open File(s) from computer"><span class="material-symbols-outlined text-sm">upload_file</span></button>
+            <button id="btnOpenFolder" title="Open Folder from computer"><span class="material-symbols-outlined text-sm">folder_open</span></button>
             <button id="btnNewFile" title="New File"><span class="material-symbols-outlined text-sm">note_add</span></button>
             <button id="btnNewFolder" title="New Folder"><span class="material-symbols-outlined text-sm">create_new_folder</span></button>
           </div>
@@ -234,7 +255,8 @@
           <p class="text-on-surface-variant mt-2 text-sm">Your modular, keyboard-first code workspace with an AI pair programmer built in.</p>
           <div class="flex gap-3 justify-center mt-6">
             <button id="welcomeNewFile" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-xs font-bold hover:brightness-110">New File</button>
-            <button id="welcomeOpenReadme" class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs hover:bg-surface-container-highest">Open README</button>
+            <button id="welcomeOpenFile" class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs hover:bg-surface-container-highest">Open File</button>
+            <button id="welcomeOpenFolder" class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs hover:bg-surface-container-highest">Open Folder</button>
             <button id="welcomeAskAI" class="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface text-xs hover:bg-surface-container-highest">Ask AI</button>
           </div>
         </div>
