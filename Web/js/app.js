@@ -28,13 +28,6 @@ function boot() {
   bus.emit('terminal:init');
   addAIMessage('Welcome to Neon Architect. I\'m your AI pair programmer — ask me anything about the project, and I can help you design, debug, or refactor.');
 
-  // Open README by default, if present
-  const readme = 'README.md';
-  const readmeNode = document.querySelector(`[data-path="${readme}"]`);
-  if (readmeNode) {
-    openFile(readme, 'README.md', 'markdown');
-  }
-
   wireGlobalActions();
   wireWelcomeButtons();
   wireTerminalOpen();
@@ -107,7 +100,7 @@ function wireGlobalActions() {
 
 function wireWelcomeButtons() {
   $('welcomeNewFile')?.addEventListener('click', () => promptNewFile());
-  $('welcomeOpenReadme')?.addEventListener('click', () => openFile('README.md', 'README.md', 'markdown'));
+  $('welcomeOpenReadme')?.addEventListener('click', () => promptNewFile());
   $('welcomeAskAI')?.addEventListener('click', () => $('chatInput')?.focus());
 }
 
@@ -135,7 +128,7 @@ window.NeonArchitect = {
   processCommand,
   runSearch,
   getShortcuts,
-  version: '1.12.0',
+  version: '1.12.9',
 };
 
 // Go!

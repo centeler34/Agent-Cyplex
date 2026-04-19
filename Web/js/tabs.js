@@ -3,9 +3,25 @@
  * Handles opening, closing, switching, and rendering editor tabs.
  */
 
-import { $, getFileIcon, bus } from './utils.js';
-import { dirty } from './filesystem.js';
+import { $, getFileIcon, getLangFromName, bus } from './utils.js';
+import { dirty, fileSystem, getNode, setNode, fileContents } from './filesystem.js';
 import { loadEditor, showWelcome, getActiveTab, setActiveTab } from './editor.js';
+
+/** Ensure every parent-dir node on `path` exists and is expanded so the tree reveals the opened file. */
+function ensurePathRevealed(path) {
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length < 1) return;
+  let node = fileSystem;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const seg = parts[i];
+    if (!node[seg] || node[seg]._type !== 'dir') {
+      node[seg] = { _type: 'dir', _expanded: true };
+    } else {
+      node[seg]._expanded = true;
+    }
+    node = node[seg];
+  }
+}
 
 /** All currently open tabs */
 const openTabs = [];
@@ -15,10 +31,18 @@ window.__neonTabs = openTabs;
 
 const editorTabs = $('editorTabs');
 
-/** Open a file in a new or existing tab */
+/** Open a file in a new or existing tab. Registers the file in the virtual fs (if missing) and
+ *  expands every parent dir so the Explorer reveals the opened file. */
 export function openFile(path, name, lang) {
+  const resolvedLang = lang || getLangFromName(name);
+
+  ensurePathRevealed(path);
+  if (!getNode(path)) {
+    setNode(path, { _type: 'file', _lang: resolvedLang, _content: fileContents[path] ?? '' });
+  }
+
   if (!openTabs.find(t => t.path === path)) {
-    openTabs.push({ path, name, lang });
+    openTabs.push({ path, name, lang: resolvedLang });
   }
   setActiveTab(path);
   renderTabs();
