@@ -185,20 +185,7 @@ $('findPrev')?.addEventListener('click', () => {
 });
 
 // ── Settings Integration ─────────────────────────────────────────────────
-$('settingFontSize')?.addEventListener('input', () => {
-  const size = $('settingFontSize').value;
-  const lh = `${Math.round(size * 1.6)}px`;
-  $('fontSizeLabel').textContent = `${size}px`;
-  codeEditor.style.fontSize = `${size}px`;
-  codeEditor.style.lineHeight = lh;
-  // Keep the gutter in lock-step so row N of the numbers aligns with row N of the text.
-  lineNumbers.style.fontSize = `${size}px`;
-  lineNumbers.style.lineHeight = lh;
-});
-
+// Font-size / word-wrap / gutter syncing is owned by settings.js so there's
+// a single place that writes to codeEditor + lineNumbers. Keeping tab-size
+// here because it only updates the status bar display, nothing else.
 $('settingTabSize')?.addEventListener('change', updateStatusBar);
-
-$('settingWordWrap')?.addEventListener('change', () => {
-  codeEditor.style.whiteSpace = $('settingWordWrap').checked ? 'pre-wrap' : 'pre';
-  codeEditor.style.overflowWrap = $('settingWordWrap').checked ? 'break-word' : 'normal';
-});

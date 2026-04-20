@@ -132,20 +132,21 @@ const commands = {
     return results.length ? results.join('\n') : `No matches for "${pattern}"`;
   },
 
-  version: () => 'Neon Architect v1.12.0',
+  version: () => `Neon Architect v${window.NeonArchitect?.version ?? 'dev'}`,
 };
 
-/** Write a line to the terminal output */
+/** Write a line to the terminal output. Translates a small ANSI color set into
+ *  styled spans. The patterns match the real ESC byte (0x1b) — escapeHtml only
+ *  escapes &<>"', so ESC survives and the regex below sees it unchanged. */
 function writeLine(text, className = 'text-on-surface-variant') {
   if (text === null || text === undefined) return;
   const div = document.createElement('div');
   div.className = className;
-  // Basic ANSI color translation: \x1b[34m..\x1b[0m → blue
   const html = escapeHtml(String(text))
-    .replace(/\\x1b\[34m/g, '<span class="text-primary">')
-    .replace(/\\x1b\[31m/g, '<span class="text-error">')
-    .replace(/\\x1b\[32m/g, '<span class="text-tertiary-dim">')
-    .replace(/\\x1b\[0m/g, '</span>');
+    .replace(/\x1b\[34m/g, '<span class="text-primary">')
+    .replace(/\x1b\[31m/g, '<span class="text-error">')
+    .replace(/\x1b\[32m/g, '<span class="text-tertiary-dim">')
+    .replace(/\x1b\[0m/g, '</span>');
   div.innerHTML = html.replace(/\n/g, '<br>');
   termOutput.appendChild(div);
   termOutput.scrollTop = termOutput.scrollHeight;
@@ -210,6 +211,6 @@ $('terminalClose')?.addEventListener('click', () => termPanel.classList.add('hid
 
 // Initial greeting
 bus.on('terminal:init', () => {
-  writeLine('Neon Architect Terminal v1.12.0', 'text-primary');
+  writeLine(`Neon Architect Terminal v${window.NeonArchitect?.version ?? 'dev'}`, 'text-primary');
   writeLine("Type 'help' for available commands.", 'text-on-surface-variant');
 });

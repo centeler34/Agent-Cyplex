@@ -9,7 +9,7 @@ import { $, bus } from './utils.js';
 const STORAGE_KEY = 'neonArchitect:settings';
 
 const defaults = {
-  fontSize: 14,
+  fontSize: 13,
   tabSize: 2,
   wordWrap: false,
   model: 'gpt-4',
@@ -44,6 +44,7 @@ export function applySettings(settings) {
   const wrapEl = $('settingWordWrap');
   const modelEl = $('modelSelect');
   const codeEl = $('codeEditor');
+  const gutterEl = $('lineNumbers');
   const fontLabel = $('fontSizeLabel');
 
   if (fontEl) fontEl.value = settings.fontSize;
@@ -52,11 +53,17 @@ export function applySettings(settings) {
   if (modelEl && settings.model) modelEl.value = settings.model;
   if (fontLabel) fontLabel.textContent = `${settings.fontSize}px`;
 
+  const lh = `${Math.round(settings.fontSize * 1.6)}px`;
   if (codeEl) {
     codeEl.style.fontSize = `${settings.fontSize}px`;
-    codeEl.style.lineHeight = `${Math.round(settings.fontSize * 1.6)}px`;
+    codeEl.style.lineHeight = lh;
     codeEl.style.whiteSpace = settings.wordWrap ? 'pre-wrap' : 'pre';
     codeEl.style.overflowWrap = settings.wordWrap ? 'break-word' : 'normal';
+  }
+  // Keep the gutter in lock-step so line-number row N aligns with text row N.
+  if (gutterEl) {
+    gutterEl.style.fontSize = `${settings.fontSize}px`;
+    gutterEl.style.lineHeight = lh;
   }
 }
 

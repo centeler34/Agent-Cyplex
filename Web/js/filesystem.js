@@ -71,13 +71,16 @@ export function saveFileContent(path) {
   }
 }
 
-/** Save all dirty files */
+/** Save all dirty files. Returns the number of files persisted so callers can
+ *  surface a count in their toast/status message. */
 export function saveAllFiles() {
+  const count = dirty.size;
   for (const path of dirty) {
     const node = getNode(path);
     if (node) node._content = fileContents[path] || '';
   }
   dirty.clear();
+  return count;
 }
 
 /** Search all files for a query string */

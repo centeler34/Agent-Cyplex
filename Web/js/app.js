@@ -5,7 +5,7 @@
  */
 
 import { $, bus, showToast } from './utils.js';
-import { saveAllFiles, exportProject } from './filesystem.js';
+import { saveAllFiles, saveFileContent, exportProject } from './filesystem.js';
 import { renderFileTree, promptNewFile, promptNewFolder } from './filetree.js';
 import { renderTabs, openFile, getOpenTabs, closeTab } from './tabs.js';
 import { loadEditor, getActiveTab, showWelcome, toggleFindBar, selectCurrentLine } from './editor.js';
@@ -46,7 +46,7 @@ function wireGlobalActions() {
   bus.on('action:save', () => {
     const path = getActiveTab();
     if (!path) return showToast('No file open', 'warning');
-    bus.emit('file:save', path);
+    saveFileContent(path);
     showToast(`Saved ${path.split('/').pop()}`, 'check');
   });
   bus.on('action:save-all', () => {
@@ -134,7 +134,7 @@ window.NeonArchitect = {
   processCommand,
   runSearch,
   getShortcuts,
-  version: '1.13.2',
+  version: '1.13.3',
 };
 
 // Go!
