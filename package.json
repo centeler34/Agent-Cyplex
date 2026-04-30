@@ -23,7 +23,7 @@
     "format": "prettier --write 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.82.0",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@commander-js/extra-typings": "^14.0.0",
     "@google/generative-ai": "^0.24.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
