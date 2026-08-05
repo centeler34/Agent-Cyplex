@@ -30,7 +30,7 @@
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "better-sqlite3": "^12.8.0",
     "commander": "^14.0.3",
-    "discord.js": "^14.26.2",
+    "discord.js": "^14.27.0",
     "express": "^5.2.1",
     "grammy": "^1.42.0",
     "ink": "^6.8.0",
